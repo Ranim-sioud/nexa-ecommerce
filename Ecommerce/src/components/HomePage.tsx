@@ -365,7 +365,7 @@ export function Navbar ({ forceScrolled = false }) {
             {/* Main Navbar */}
             <header 
                 className={`fixed left-0 right-0 z-50 text-white transition-all duration-500 ease-out ${
-                    isScrolled ? 'bg-theme-primary shadow-2xl' : 'bg-transparent py-4 md:py-8 lg:py-12'
+                    isScrolled ? 'bg-theme-primary shadow-2xl' : 'bg-transparent py-12 md:py-8 lg:py-12'
                 } ${
                     navbarHidden ? '-translate-y-full' : 'translate-y-0'
                 }`}
@@ -380,18 +380,18 @@ export function Navbar ({ forceScrolled = false }) {
                 <div className="container mx-auto px-4 md:px-8 lg:px-16 h-16 md:h-20 flex items-center justify-between">
                     
                     {/* Logo - CORRIGÉ : py responsif */}
-                    <div onClick={() => navigate('/')} className="cursor-pointer py-4 md:py-8 lg:py-12 flex items-center gap-1 md:gap-2">
+                    <div onClick={() => navigate('/')} className="cursor-pointer py-12 md:py-8 lg:py-12 flex items-center gap-1 md:gap-2">
                         <img 
                             src={logo} 
                             alt="XTRA Logo" 
-                            className="w-12 h-12 md:w-16 md:h-16 lg:w-20 lg:h-20 object-contain transition-all duration-500"
+                            className="w-16 h-16 md:w-16 md:h-16 lg:w-20 lg:h-20 object-contain transition-all duration-500"
                             style={{
                                 transform: isScrolled ? 'scale(0.9)' : 'scale(1)'
                             }}
                         />
-                        <div className={`text-xl md:text-2xl lg:text-3xl text-white tracking-tight leading-none transition-all duration-500 ${isScrolled ? 'opacity-90' : 'opacity-100'}`}>
+                        <div className={`text-3xl md:text-2xl lg:text-3xl text-white tracking-tight leading-none transition-all duration-500 ${isScrolled ? 'opacity-90' : 'opacity-100'}`}>
                             NEXA <br className="block md:hidden lg:block"/> 
-                            <p className='text-[10px] md:text-xs lg:text-sm font-normal text-gray-400'>NETWORK</p> 
+                            <p className='text-sm md:text-xs lg:text-sm font-normal text-gray-400'>NETWORK</p> 
                         </div>
                     </div>
 
@@ -424,13 +424,13 @@ export function Navbar ({ forceScrolled = false }) {
                         <div className="hidden md:flex items-center space-x-2 lg:space-x-4 ml-2 lg:ml-8">
                             <button 
                                 onClick={() => navigate('/login')}
-                                className="text-xs lg:text-sm font-bold text-theme-white hover:text-theme-secondary transition-colors whitespace-nowrap"
+                                className="text-sm lg:text-sm font-bold text-theme-white hover:text-theme-secondary transition-colors whitespace-nowrap"
                             >
                                 Connexion
                             </button>
                             <Button 
                                 onClick={() => navigate('/auth/signup')}
-                                className="bg-transparent hover:bg-theme-secondary h-8 lg:h-10 px-3 lg:px-6 rounded-full text-xs lg:text-sm shadow-theme border-2 border-theme whitespace-nowrap"
+                                className="bg-transparent hover:bg-theme-secondary h-8 lg:h-10 px-3 lg:px-6 rounded-full text-sm lg:text-sm shadow-theme border-2 border-theme whitespace-nowrap"
                                 size="sm"
                             >
                                 Inscription
@@ -1011,6 +1011,7 @@ export default function HomePage() {
     const categoryContainerRef = useRef(null);
     const pricingContainerRef = useRef(null);
     const navigate = useNavigate();
+     const location = window.location.pathname; 
 
     const scrollCategories = (direction) => {
         if (categoryContainerRef.current) {
@@ -1062,7 +1063,6 @@ export default function HomePage() {
     },
   ];
 
-    const usefulLinks = ["Purchase now", "Support", "Documentation", "Custom Services", "Marketplaces", "Codevz Website", "Portfolio Reviews"];
     const shortcuts = ["Acceuil", "Packs", "Processus", "Publicité",   "Témoignages"];
     
     const FooterLink = ({ link }) => (
@@ -1491,12 +1491,53 @@ export default function HomePage() {
                                     SHORTCUTS
                                   </h4>
                                   <ul className="list-none p-0">
-                                    {shortcuts.map((link, index) => (
-                                      <li key={index} className="group flex items-start text-gray-300 hover:text-white transition-colors cursor-pointer text-md mb-2">
-                                        <span className="footer-link-point w-3 h-3 mt-1 rounded-full border border-gray-500 bg-transparent mr-3 flex-shrink-0 transition-all duration-200"></span>
-                                        {link}
-                                      </li>
-                                    ))}
+                                    {shortcuts.map((link, index) => {
+                                      // Map the link text to the corresponding href
+                                      const getHref = (linkText) => {
+                                        switch(linkText.toLowerCase()) {
+                                          case 'acceuil':
+                                            return '#hero';
+                                          case 'packs':
+                                            return '#pricing';
+                                          case 'processus':
+                                            return '#process';
+                                          case 'publicité':
+                                            return '#publicite';
+                                          case 'témoignages':
+                                            return '#témoignages';
+                                          default:
+                                            return '#';
+                                        }
+                                      };
+                                
+                                      return (
+                                        <li 
+                                          key={index} 
+                                          className="group flex items-start text-gray-300 hover:text-white transition-colors cursor-pointer text-md mb-2"
+                                          onClick={() => {
+                                            const href = getHref(link);
+                                            if (location === '/' || location === '/home' || location === '/landing') {
+                                              const element = document.querySelector(href);
+                                              if (element) {
+                                                element.scrollIntoView({ behavior: 'smooth' });
+                                              }
+                                            } else {
+                                              navigate('/');
+                                              // Small delay to ensure the home page loads before scrolling
+                                              setTimeout(() => {
+                                                const element = document.querySelector(href);
+                                                if (element) {
+                                                  element.scrollIntoView({ behavior: 'smooth' });
+                                                }
+                                              }, 100);
+                                            }
+                                          }}
+                                        >
+                                          <span className="footer-link-point w-3 h-3 mt-1 rounded-full border border-gray-500 bg-transparent mr-3 flex-shrink-0 transition-all duration-200"></span>
+                                          {link}
+                                        </li>
+                                      );
+                                    })}
                                   </ul>
                                 </div>
 
