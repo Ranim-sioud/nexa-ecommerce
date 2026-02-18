@@ -1,0 +1,42 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_USER: nexadb
+      POSTGRES_PASSWORD: example
+      POSTGRES_DB: nexa
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+
+  backend:
+    build:
+      context: ./backend
+    ports:
+      - "4001:4001"
+    environment:
+      - NODE_ENV=development
+      - PORT=4001
+      - DATABASE_URL=postgres://nexadb:example@postgres:5432/nexa
+      - FRONTEND_URL=http://localhost:3000
+    depends_on:
+      - postgres
+    volumes:
+      - ./backend:/app
+    command: npm run dev
+
+  frontend:
+    build:
+      context: ./Ecommerce
+    ports:
+      - "3000:80"
+    depends_on:
+      - backend
+    volumes:
+      - ./Ecommerce:/app
+
+volumes:
+  postgres-data:
