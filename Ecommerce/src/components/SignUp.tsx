@@ -98,7 +98,7 @@ export default function SignUp({ onSwitchToLogin }: SignUpProps) {
         endpoint = "/auth/register-fournisseur";
       }
 
-      const response = await api.post(endpoint);
+      const response = await api.post(endpoint, payload);
 
       const data = await response.data;
 
