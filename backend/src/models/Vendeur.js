@@ -35,6 +35,16 @@ const Vendeur = sequelize.define('Vendeur', {
     type: DataTypes.STRING(50),
     allowNull: true
   },
+  pack_demande: {
+    type: DataTypes.STRING(50),
+    allowNull: true
+  },
+  
+  // Statut de la demande de pack
+  statut_demande_pack: {
+    type: DataTypes.ENUM('aucune', 'en_attente', 'approuvee', 'refusee'),
+    defaultValue: 'aucune'
+  },
   nom_boutique: {
     type: DataTypes.STRING,
     allowNull: true

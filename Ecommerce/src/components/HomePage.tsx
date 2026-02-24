@@ -684,7 +684,7 @@ const packagesData = [
     {
         id: "legacy", 
         name: "Legacy", 
-        price: "1290.00 DT",
+        price: "1330.00 DT",
         features: [
             "Marketing Digital - Niveau 3 (Analyse & Optimisation)",
             "Anglais - Niveau 3 (Affaires - Marketing)",
