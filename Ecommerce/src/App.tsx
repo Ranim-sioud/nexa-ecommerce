@@ -13,6 +13,8 @@ const FAQPage = lazy(() => import("./components/FAQPage"));
 const AuthPages = lazy(() => import("./components/AuthPages"));
 const SignUp = lazy(() => import("./components/SignUp"));
 const Login = lazy(() => import("./components/Login"));
+const ForgotPassword = lazy(() => import("./components/ForgotPassword"));
+const ResetPassword = lazy(() => import("./components/ResetPassword"));
 
 /* ========== Dashboards ========== */
 const Dashboard = lazy(() => import("./components/dashboard/Dashboard"));
@@ -82,6 +84,8 @@ export default function App() {
         <Route path="/auth/*" element={<AuthPages />} />
         <Route path="/auth/signup" element={<SignUp />} />
         <Route path="/auth/login" element={<Login />} />
+        <Route path="/auth/forgot-password" element={<ForgotPassword />} />
+        <Route path="/auth/reset-password" element={<ResetPassword />} />
 
         {/* Dashboard + Enfants */}
         <Route element={<DashboardLayout />}>
