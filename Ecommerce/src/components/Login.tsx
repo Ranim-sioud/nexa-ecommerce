@@ -78,12 +78,7 @@ export default function Login() {
   };
 
   const handleForgotPassword = () => {
-    Swal.fire({
-      icon: "info",
-      title: "Mot de passe oublié",
-      text: "Un email de récupération vous sera envoyé",
-      confirmButtonColor: "#0d9488",
-    });
+    navigate("/auth/forgot-password");
   };
 
   return (

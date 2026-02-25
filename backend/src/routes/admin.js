@@ -1,6 +1,6 @@
 import express from "express";
 import {requireAuth, requireAdmin} from "../middlewares/authMiddleware.js";
-import { listUsers, updateUserStatus, getVendeurPacks, deleteUser, assignTickets, closeTickets, createType, repondreTicket, assignPermission, getPermissions, getSpecialistPermissions, removePermission, assignTask, getTasks, updateTaskStatus, getSpecialists, getAdminDashboard } from "../controllers/adminController.js";
+import { listUsers, updateUserStatus, getVendeurPacks, deleteUser, assignTickets, closeTickets, createType, repondreTicket, assignPermission, getPermissions, getSpecialistPermissions, removePermission, assignTask, getTasks, updateTaskStatus, getSpecialists, getAdminDashboard, traiterDemandePack } from "../controllers/adminController.js";
 import { requirePermission } from "../middlewares/permissionMiddleware.js";
 
 const router = express.Router();
@@ -29,5 +29,7 @@ router.patch("/tasks/:id/status",requirePermission, updateTaskStatus);
 // Gestion des spécialistes
 router.get("/specialists", getSpecialists);
 router.get("/dashboard", getAdminDashboard);
+router.patch('/traiter/:userId', requireAuth, traiterDemandePack);
+
 
 export default router;

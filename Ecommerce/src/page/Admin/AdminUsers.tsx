@@ -106,6 +106,36 @@ export default function AdminUsers() {
     }
   };
 
+  const handlePackDecision = async (userId: string, decision: "approuvee" | "refusee") => {
+  try {
+    await api.patch(`/admin/traiter/${userId}`, {
+      decision,
+    });
+
+    // Mise à jour locale
+    setUsers((prev) =>
+      prev.map((u) =>
+        u.id === userId
+          ? {
+              ...u,
+              vendeur: {
+                ...u.vendeur,
+                statut_demande_pack: decision,
+                pack_cle:
+                  decision === "approuvee"
+                    ? u.vendeur?.pack_demande
+                    : u.vendeur?.pack_cle,
+                pack_demande: decision === "approuvee" ? null : u.vendeur?.pack_demande,
+              },
+            }
+          : u
+      )
+    );
+  } catch (err) {
+    console.error("handlePackDecision error:", err);
+  }
+};
+
   const confirmDeleteUser = (u) => {
     setUserToDelete(u);
     setIsDeleteModalOpen(true);
@@ -334,10 +364,19 @@ export default function AdminUsers() {
                       </div>
                     </td>
                     <td className="p-3 font-medium text-cyan-800 truncate">
-                      {title === "Vendeurs" 
-                        ? u.vendeur?.pack_cle || "-"
-                        : u.fournisseur?.identifiant_public || "-"
-                      }
+                      {title === "Vendeurs" ? (
+                        <div className="flex flex-col gap-1">
+                          <span>{u.vendeur?.pack_cle || "-"}</span>
+                    
+                          {u.vendeur?.statut_demande_pack === "en_attente" && (
+                            <Badge className="bg-yellow-100 text-yellow-700 w-fit">
+                              Demande pack en attente
+                            </Badge>
+                          )}
+                        </div>
+                      ) : (
+                        u.fournisseur?.identifiant_public || "-"
+                      )}
                     </td>
                     <td className="p-3">
                       <Badge className={`px-2 py-1 rounded-full text-xs ${
@@ -373,6 +412,28 @@ export default function AdminUsers() {
                             <Button variant="ghost" size="sm" onClick={() => openUserModal(u)} className="text-gray-600 hover:text-gray-900">
                               <Eye size={16} /> <span className="ml-2">Voir Profil</span>
                             </Button>
+                            {u.role === "vendeur" &&
+                              u.vendeur?.statut_demande_pack === "en_attente" && (
+                                <>
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => handlePackDecision(u.id, "approuvee")}
+                                    className="text-green-600 hover:text-green-800"
+                                  >
+                                    ✅ Accepter le pack
+                                  </Button>
+                            
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => handlePackDecision(u.id, "refusee")}
+                                    className="text-red-600 hover:text-red-800"
+                                  >
+                                    ❌ Refuser le pack
+                                  </Button>
+                                </>
+                            )}
                             <Button variant="ghost" size="sm" onClick={() => confirmDeleteUser(u)} className="text-pink-600 hover:text-pink-800">
                               <Trash2 size={16} /> <span className="ml-2">Supprimer</span>
                             </Button>
@@ -523,121 +584,119 @@ export default function AdminUsers() {
 
         {/* Modal profil utilisateur */}
         <Dialog open={isModalOpen} onClose={() => setIsModalOpen(false)} className="relative z-50">
-          <div className="fixed inset-0 bg-black/40 flex items-center justify-center p-2 sm:p-4">
-            <Dialog.Panel className="bg-gray-50 rounded-2xl shadow-2xl w-full max-w-full sm:max-w-md md:max-w-2xl border border-gray-200 overflow-hidden max-h-[90vh] overflow-y-auto">
+          {/* Backdrop flou pour plus de focus */}
+          <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm" aria-hidden="true" />
+        
+          <div className="fixed inset-0 flex items-center justify-center p-4">
+            <Dialog.Panel className="bg-white rounded-3xl shadow-2xl w-full max-w-2xl border border-gray-100 overflow-hidden max-h-[90vh] flex flex-col">
               {selectedUser && (
                 <>
+                  {/* Header : Plus moderne et moins sombre */}
                   <div className="bg-gradient-to-r from-indigo-500 to-black p-6 text-white">
-                    <div className="flex items-center gap-4">
-                      <div className="w-16 h-16 sm:w-20 sm:h-20 bg-black text-white rounded-full flex items-center justify-center text-2xl sm:text-3xl font-bold border-2 border-white/30 shadow-lg">
+                    <div className="flex items-center gap-6">
+                      <div className="w-20 h-20 text-black backdrop-blur-md rounded-2xl flex items-center justify-center text-3xl font-bold border border-black shadow-xl">
                         {selectedUser.nom?.charAt(0)?.toUpperCase() || "U"}
                       </div>
-                      <div className="flex-1">
-                        <Dialog.Title className="text-xl sm:text-2xl font-bold">
+                      <div>
+                        <Dialog.Title className="text-2xl font-bold tracking-tight">
                           {selectedUser.nom}
                         </Dialog.Title>
-                        <p className="text-indigo-100 opacity-90 text-sm sm:text-base break-words">
+                        <p className="text-indigo-100/80 font-medium italic">
                           {selectedUser.email}
                         </p>
                       </div>
                     </div>
                   </div>
-
-                  <div className="p-4 sm:p-6 bg-white">
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 text-sm">
-                      <div className="bg-gray-100 p-3 sm:p-4 rounded-xl">
-                        <span className="font-medium text-gray-600 block mb-1">Rôle</span>
-                        <Badge className={
-                          selectedUser.role === "vendeur" 
-                            ? "bg-cyan-100 text-cyan-700" 
-                            : "bg-purple-100 text-purple-700"
-                        }>
-                          {selectedUser.role}
-                        </Badge>
+        
+                  {/* Body : Contenu aéré et structuré */}
+                  <div className="p-6 overflow-y-auto bg-white">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                      
+                      {/* Groupe Statut & Rôle */}
+                      <div className="space-y-4">
+                        <div>
+                          <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest block mb-2">Rôle Utilisateur</label>
+                          <Badge className={`px-3 py-1 rounded-full text-xs font-semibold ${
+                            selectedUser.role === "vendeur" ? "bg-cyan-50 text-cyan-700 border border-cyan-100" : "bg-purple-50 text-purple-700 border border-purple-100"
+                          }`}>
+                            {selectedUser.role}
+                          </Badge>
+                        </div>
+                        <div>
+                          <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest block mb-2">État du compte</label>
+                          <Badge className={`px-3 py-1 rounded-full text-xs font-semibold ${
+                            selectedUser.actif ? "bg-emerald-50 text-emerald-700 border border-emerald-100" : "bg-rose-50 text-rose-700 border border-rose-100"
+                          }`}>
+                            {selectedUser.actif ? "Actif" : "Inactif"}
+                          </Badge>
+                        </div>
                       </div>
-
-                      <div className="bg-gray-100 p-3 sm:p-4 rounded-xl">
-                        <span className="font-medium text-gray-600 block mb-1">Statut</span>
-                        <Badge className={
-                          selectedUser.actif 
-                            ? "bg-teal-100 text-teal-600" 
-                            : "bg-pink-100 text-pink-600"
-                        }>
-                          {selectedUser.actif ? "Actif" : "Inactif"}
-                        </Badge>
+        
+                      {/* Infos de contact */}
+                      <div className="space-y-4">
+                        <div>
+                          <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest block mb-1">Téléphone</label>
+                          <p className="text-gray-900 font-semibold">{selectedUser.telephone || "—"}</p>
+                        </div>
+                        {selectedUser.role === "vendeur" && (
+                          <div>
+                            <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest block mb-1">Pack Actuel</label>
+                            <p className="text-indigo-600 font-bold">{selectedUser.vendeur?.pack_cle || "Standard"}</p>
+                          </div>
+                        )}
                       </div>
-
-                      {selectedUser.role === "vendeur" && (
-                        <div className="bg-gray-100 p-3 sm:p-4 rounded-xl">
-                          <span className="font-medium text-gray-600 block mb-1">Pack</span>
-                          <span className="text-gray-800 font-medium">
-                            {selectedUser.vendeur?.pack_cle || "-"}
-                          </span>
+        
+                      {/* Demande de Pack (Si existante) */}
+                      {selectedUser.vendeur?.statut_demande_pack === "en_attente" && (
+                        <div className="col-span-full bg-amber-50 border border-amber-100 p-8 rounded-2xl items-center justify-between">
+                          <div>
+                            <p className="text-amber-800 text-sm font-bold">Changement de pack demandé</p>
+                            <p className="text-amber-700 text-xs font-medium">Cible : {selectedUser.vendeur?.pack_demande}</p>
+                          </div>
+                          <div className="flex gap-2 mt-4">
+                            <button onClick={() => handlePackDecision(selectedUser.id, "approuvee")} className="bg-teal-400 text-white text-xs px-4 py-2 rounded-lg font-bold hover:bg-teal-500 transition-all shadow-sm">Accepter</button>
+                            <button onClick={() => handlePackDecision(selectedUser.id, "refusee")} className="bg-white text-amber-700 border border-pink-500 text-pink-500 text-xs px-4 py-2 rounded-lg font-bold hover:bg-amber-50 transition-all">Refuser</button>
+                          </div>
                         </div>
                       )}
-
-                      {selectedUser.role === "fournisseur" && (
-                        <div className="bg-gray-100 p-3 sm:p-4 rounded-xl">
-                          <span className="font-medium text-gray-600 block mb-1">Identifiant public</span>
-                          <span className="text-gray-800 font-medium">
-                            {selectedUser.fournisseur?.identifiant_public || "-"}
-                          </span>
+        
+                      {/* Localisation : Plus lisible */}
+                      <div className="col-span-full border-t border-gray-50 pt-4">
+                        <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest block mb-2">Localisation & Détails</label>
+                        <div className="grid grid-cols-2 gap-4">
+                          <div className="col-span-2 bg-slate-50 p-3 rounded-xl border border-slate-100">
+                            <p className="text-xs text-slate-500 mb-1 font-medium">Adresse</p>
+                            <p className="text-sm text-slate-900 font-semibold">{selectedUser.adresse}</p>
+                          </div>
+                          <div className="bg-slate-50 p-3 rounded-xl border border-slate-100">
+                            <p className="text-xs text-slate-500 mb-1 font-medium">Ville / Gouvernorat</p>
+                            <p className="text-sm text-slate-900 font-semibold">{selectedUser.ville}, {selectedUser.gouvernorat}</p>
+                          </div>
+                          <div className="bg-slate-50 p-3 rounded-xl border border-slate-100">
+                            <p className="text-xs text-slate-500 mb-1 font-medium">Membre depuis</p>
+                            <p className="text-sm text-slate-900 font-semibold">{new Date(selectedUser.cree_le).toLocaleDateString("fr-FR")}</p>
+                          </div>
                         </div>
-                      )}
-
-                      <div className="bg-gray-100 p-3 sm:p-4 rounded-xl">
-                        <span className="font-medium text-gray-600 block mb-1">Téléphone</span>
-                        <span className="text-gray-800 font-medium">{selectedUser.telephone || "-"}</span>
-                      </div>
-
-                      <div className="bg-gray-100 p-3 sm:p-4 rounded-xl sm:col-span-2">
-                        <span className="font-medium text-gray-600 block mb-1">Adresse</span>
-                        <span className="text-gray-800 font-medium break-words">
-                          {selectedUser.adresse}
-                        </span>
-                      </div>
-
-                      <div className="bg-gray-100 p-3 sm:p-4 rounded-xl">
-                        <span className="font-medium text-gray-600 block mb-1">Ville</span>
-                        <span className="text-gray-800 font-medium">{selectedUser.ville}</span>
-                      </div>
-
-                      <div className="bg-gray-100 p-3 sm:p-4 rounded-xl">
-                        <span className="font-medium text-gray-600 block mb-1">Gouvernorat</span>
-                        <span className="text-gray-800 font-medium">{selectedUser.gouvernorat}</span>
-                      </div>
-
-                      <div className="bg-gray-100 p-3 sm:p-4 rounded-xl sm:col-span-2">
-                        <span className="font-medium text-gray-600 block mb-1">Créé le</span>
-                        <span className="text-gray-800 font-medium">
-                          {new Date(selectedUser.cree_le).toLocaleDateString("fr-FR", {
-                            weekday: "long",
-                            year: "numeric",
-                            month: "long",
-                            day: "numeric",
-                          })}
-                        </span>
                       </div>
                     </div>
-
-                    <div className="mt-6 flex flex-col sm:flex-row gap-3 justify-end">
-                      <Button 
-                        onClick={() => toggleActive(selectedUser)}
-                        className={selectedUser.actif 
-                          ? "bg-yellow-500 hover:bg-yellow-600 text-white" 
-                          : "bg-teal-500 hover:bg-teal-600 text-white"
-                        }
-                      >
-                        {selectedUser.actif ? <UserX size={16} /> : <UserCheck size={16} />}
-                        <span className="ml-2">
-                          {selectedUser.actif ? "Désactiver" : "Activer"}
-                        </span>
-                      </Button>
-                      <Button 
+        
+                    {/* Actions de pied de page */}
+                    <div className="mt-8 flex items-center justify-end gap-3 pt-6 border-t border-gray-100">
+                      <button
                         onClick={() => setIsModalOpen(false)}
-                        className="bg-gray-200 hover:bg-gray-300 text-gray-700"
+                        className="px-6 py-2.5 text-sm font-bold text-pink-600 border border-pink-600 hover:text-pink-700 transition-colors rounded-lg"
                       >
                         Fermer
+                      </button>
+                      <Button
+                        onClick={() => toggleActive(selectedUser)}
+                        className={`px-6 py-2.5 rounded-lg text-sm font-bold shadow-lg transition-all ${
+                          selectedUser.actif 
+                            ? "bg-yellow-500 hover:bg-yellow-600 text-white shadow-yellow-200" 
+                            : "bg-teal-400 hover:bg-teal-500 text-white shadow-emerald-200"
+                        }`}
+                      >
+                        {selectedUser.actif ? "Désactiver le compte" : "Activer le compte"}
                       </Button>
                     </div>
                   </div>

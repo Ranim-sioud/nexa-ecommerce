@@ -363,48 +363,211 @@ export async function logout(req, res) {
   }
 }
 
-  export async function registerAdmin(req, res) {
+export async function forgotPassword(req, res) {
   try {
-    const { nom, email, telephone, mot_de_passe, gouvernorat, ville, adresse, facebook_url, instagram_url } = req.body;
+    const { email } = req.body;
 
-    if (!nom || !email || !mot_de_passe || !gouvernorat || !ville || !adresse)
-      return res.status(400).json({ message: 'Champs requis manquants' });
+    if (!email) {
+      return res.status(400).json({ message: "Email requis" });
+    }
 
-    const existing = await User.findOne({ where: { email } });
-    if (existing) return res.status(400).json({ message: 'Email déjà utilisé' });
+    // Vérifier si l'utilisateur existe
+    const user = await User.findOne({ where: { email } });
 
-    const hashed = await argon2.hash(mot_de_passe, { type: argon2.argon2id });
+    if (!user) {
+      // Pour des raisons de sécurité, on ne divulgue pas si l'email existe ou non
+      return res.json({ message: "Si cet email existe, un lien de réinitialisation a été envoyé" });
+    }
 
-    const admin = await User.create({
-      nom, email, telephone,
-      mot_de_passe: hashed,
-      role: 'admin',
-      gouvernorat, ville, adresse,
-      facebook_url, instagram_url,
-      actif: true // admin actif directement
+    // Générer un token de réinitialisation (valable 1 heure)
+    const resetToken = jwt.sign(
+      { id: user.id, email: user.email, purpose: "password-reset" },
+      process.env.JWT_SECRET,
+      { expiresIn: "1h" }
+    );
+
+    // Sauvegarder le token dans la base de données (optionnel, pour plus de sécurité)
+    user.reset_password_token = resetToken;
+    user.reset_password_expires = new Date(Date.now() + 3600000); // +1 heure
+    await user.save();
+
+    // Créer le lien de réinitialisation
+    const resetLink = `${process.env.FRONTEND_URL}/auth/reset-password?token=${resetToken}`;
+
+    // Envoyer l'email
+    await transporter.sendMail({
+      from: `"Nexa App" <${process.env.MAIL_USER}>`,
+      to: user.email,
+      subject: "Réinitialisation de votre mot de passe",
+      html: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+          <h2 style="color: #0d9488;">Réinitialisation de mot de passe</h2>
+          <p>Bonjour ${user.nom},</p>
+          <p>Vous avez demandé la réinitialisation de votre mot de passe. Cliquez sur le lien ci-dessous pour procéder :</p>
+          <div style="text-align: center; margin: 30px 0;">
+            <a href="${resetLink}" style="background-color: #0d9488; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; font-weight: bold;">Réinitialiser mon mot de passe</a>
+          </div>
+          <p>Ce lien expirera dans 1 heure.</p>
+          <p>Si vous n'avez pas demandé cette réinitialisation, ignorez cet email.</p>
+          <hr style="border: 1px solid #e2e8f0; margin: 20px 0;" />
+          <p style="color: #718096; font-size: 0.9em;">Cet email a été envoyé automatiquement, merci de ne pas y répondre.</p>
+        </div>
+      `
     });
 
-    // Générer un identifiant_public unique
-    const identifiantPublic = `PUB-${admin.id}-${Math.random().toString(36).slice(2,8).toUpperCase()}`;
+    res.json({ message: "Si cet email existe, un lien de réinitialisation a été envoyé" });
 
-    await Fournisseur.create({
-      id_user: admin.id,
-      identifiant_public: identifiantPublic,
-      solde_portefeuille: 0
-    });
+  } catch (err) {
+    console.error("Erreur forgotPassword:", err);
+    res.status(500).json({ message: "Erreur lors de l'envoi de l'email" });
+  }
+}
 
-    res.status(201).json({
-      message: 'Admin créé avec rôle Fournisseur',
-      admin: { 
-        id: admin.id, 
-        email: admin.email, 
-        nom: admin.nom, 
-        identifiant_public: identifiantPublic 
+// Vérifier la validité du token de réinitialisation
+export async function verifyResetToken(req, res) {
+  try {
+    const { token } = req.params;
+
+    if (!token) {
+      return res.status(400).json({ message: "Token manquant" });
+    }
+
+    // Vérifier le token JWT
+    let decoded;
+    try {
+      decoded = jwt.verify(token, process.env.JWT_SECRET);
+    } catch (err) {
+      return res.status(400).json({ message: "Token invalide ou expiré" });
+    }
+
+    // Vérifier que c'est bien un token de réinitialisation
+    if (decoded.purpose !== "password-reset") {
+      return res.status(400).json({ message: "Token invalide" });
+    }
+
+    // Vérifier si l'utilisateur existe et si le token est valide
+    const user = await User.findOne({
+      where: {
+        id: decoded.id,
+        reset_password_token: token,
+        reset_password_expires: { [Op.gt]: new Date() }
       }
     });
 
+    if (!user) {
+      return res.status(400).json({ message: "Token invalide ou expiré" });
+    }
+
+    res.json({ 
+      valid: true,
+      message: "Token valide",
+      email: user.email 
+    });
+
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ message: 'Erreur serveur' });
+    console.error("Erreur verifyResetToken:", err);
+    res.status(500).json({ message: "Erreur serveur" });
+  }
+}
+
+// Réinitialiser le mot de passe
+export async function resetPassword(req, res) {
+  const t = await sequelize.transaction();
+  
+  try {
+    const { token, nouveau_mot_de_passe, confirmer_mot_de_passe } = req.body;
+
+    if (!token || !nouveau_mot_de_passe || !confirmer_mot_de_passe) {
+      await t.rollback();
+      return res.status(400).json({ message: "Tous les champs sont requis" });
+    }
+
+    // Vérifier que les mots de passe correspondent
+    if (nouveau_mot_de_passe !== confirmer_mot_de_passe) {
+      await t.rollback();
+      return res.status(400).json({ message: "Les mots de passe ne correspondent pas" });
+    }
+
+    // Vérifier la complexité du mot de passe
+    if (!isPasswordValid(nouveau_mot_de_passe)) {
+      await t.rollback();
+      return res.status(400).json({
+        message: "Mot de passe invalide : minimum 8 caractères, incluant une majuscule, une minuscule et un chiffre"
+      });
+    }
+
+    // Vérifier le token JWT
+    let decoded;
+    try {
+      decoded = jwt.verify(token, process.env.JWT_SECRET);
+    } catch (err) {
+      await t.rollback();
+      return res.status(400).json({ message: "Token invalide ou expiré" });
+    }
+
+    // Vérifier que c'est bien un token de réinitialisation
+    if (decoded.purpose !== "password-reset") {
+      await t.rollback();
+      return res.status(400).json({ message: "Token invalide" });
+    }
+
+    // Vérifier si l'utilisateur existe et si le token est valide
+    const user = await User.findOne({
+      where: {
+        id: decoded.id,
+        reset_password_token: token,
+        reset_password_expires: { [Op.gt]: new Date() }
+      },
+      transaction: t
+    });
+
+    if (!user) {
+      await t.rollback();
+      return res.status(400).json({ message: "Token invalide ou expiré" });
+    }
+
+    // Hasher le nouveau mot de passe
+    const hashedPassword = await argon2.hash(nouveau_mot_de_passe, { type: argon2.argon2id });
+
+    // Mettre à jour le mot de passe et supprimer le token
+    user.mot_de_passe = hashedPassword;
+    user.reset_password_token = null;
+    user.reset_password_expires = null;
+    
+    // Invalider tous les refresh tokens pour plus de sécurité
+    user.refresh_token = null;
+
+    await user.save({ transaction: t });
+
+    // Envoyer un email de confirmation
+    await transporter.sendMail({
+      from: `"Nexa App" <${process.env.MAIL_USER}>`,
+      to: user.email,
+      subject: "Votre mot de passe a été modifié",
+      html: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+          <h2 style="color: #0d9488;">Mot de passe modifié avec succès</h2>
+          <p>Bonjour ${user.nom},</p>
+          <p>Votre mot de passe a été modifié avec succès.</p>
+          <p>Si vous n'êtes pas à l'origine de cette modification, veuillez contacter immédiatement notre support.</p>
+          <div style="text-align: center; margin: 30px 0;">
+            <a href="${process.env.FRONTEND_URL}/auth/login" style="background-color: #0d9488; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; font-weight: bold;">Se connecter</a>
+          </div>
+        </div>
+      `
+    });
+
+    await t.commit();
+
+    // Nettoyer les cookies si l'utilisateur était connecté
+    res.clearCookie("accessToken");
+    res.clearCookie("refreshToken");
+
+    res.json({ message: "Mot de passe réinitialisé avec succès" });
+
+  } catch (err) {
+    await t.rollback();
+    console.error("Erreur resetPassword:", err);
+    res.status(500).json({ message: "Erreur lors de la réinitialisation" });
   }
 }

@@ -69,6 +69,9 @@ export async function getMe(req, res) {
       response.nom_boutique = user.vendeur.nom_boutique;
       response.code_parrainage = user.vendeur.code_parrainage;
       response.solde_portefeuille = user.vendeur.solde_portefeuille;
+      response.pack_cle = user.vendeur.pack_cle;
+      response.pack_demande = user.vendeur.pack_demande;
+      response.statut_demande_pack = user.vendeur.statut_demande_pack;
     } 
     else if (user.role === "fournisseur" && user.fournisseur) {
       response.identifiant_public = user.fournisseur.identifiant_public;
@@ -85,8 +88,12 @@ export async function getMe(req, res) {
 // Modifier les infos du compte
 export async function updateMe(req, res) {
   try {
-    const user = req.user;
+    
     const { nom, telephone, gouvernorat, ville, adresse, facebook_url, instagram_url, rib, nom_boutique, mot_de_passe } = req.body;
+    const user = await User.findByPk(req.user.id);
+    if (!user) {
+      return res.status(404).json({ message: "Utilisateur non trouvé" });
+    }
 
     if (mot_de_passe) {
       if (mot_de_passe.length < 8) {
@@ -95,14 +102,14 @@ export async function updateMe(req, res) {
       user.mot_de_passe = await argon2.hash(mot_de_passe);
     }
 
-    user.nom = nom || user.nom;
-    user.telephone = telephone || user.telephone;
-    user.gouvernorat = gouvernorat || user.gouvernorat;
-    user.ville = ville || user.ville;
-    user.adresse = adresse || user.adresse;
-    user.facebook_url = facebook_url || user.facebook_url;
-    user.instagram_url = instagram_url || user.instagram_url;
-    user.rib = rib || user.rib; 
+    user.nom = nom ?? user.nom;
+    user.telephone = telephone ?? user.telephone;
+    user.gouvernorat = gouvernorat ?? user.gouvernorat;
+    user.ville = ville ?? user.ville;
+    user.adresse = adresse ?? user.adresse;
+    user.facebook_url = facebook_url ?? user.facebook_url;
+    user.instagram_url = instagram_url ?? user.instagram_url;
+    user.rib = rib ?? user.rib;
 
     await user.save();
 
@@ -136,7 +143,10 @@ cloudinary.config({
 // 🔹 Route Upload Photo
 export async function uploadProfileImage(req, res) {
   try {
-    const user = req.user;
+    const user = await User.findByPk(req.user.id);
+    if (!user) {
+      return res.status(404).json({ message: "Utilisateur non trouvé" });
+    }
     if (!req.file) {
       return res.status(400).json({ message: "Aucun fichier envoyé" });
     }
@@ -193,14 +203,14 @@ export async function updateProfile(req, res) {
     }
 
     // Mettre à jour autres infos
-    user.nom = nom || user.nom;
-    user.telephone = telephone || user.telephone;
-    user.gouvernorat = gouvernorat || user.gouvernorat;
-    user.ville = ville || user.ville;
-    user.adresse = adresse || user.adresse;
-    user.facebook_url = facebook_url || user.facebook_url;
-    user.instagram_url = instagram_url || user.instagram_url;
-    user.rib = rib || user.rib;
+    user.nom = nom ?? user.nom;
+    user.telephone = telephone ?? user.telephone;
+    user.gouvernorat = gouvernorat ?? user.gouvernorat;
+    user.ville = ville ?? user.ville;
+    user.adresse = adresse ?? user.adresse;
+    user.facebook_url = facebook_url ?? user.facebook_url;
+    user.instagram_url = instagram_url ?? user.instagram_url;
+    user.rib = rib ?? user.rib;
 
     await user.save();
 
@@ -289,3 +299,109 @@ export const getSoldeUtilisateur = async (req, res) => {
     res.status(500).json({ message: "Erreur serveur", error: error.message });
   }
 };
+
+
+// Demander un changement de pack
+export async function demanderChangementPack(req, res) {
+  try {
+    const { nouveau_pack } = req.body;
+
+    if (!nouveau_pack) {
+      return res.status(400).json({ message: "Pack invalide" });
+    }
+
+    const vendeur = await Vendeur.findOne({
+      where: { id_user: req.user.id }
+    });
+
+    if (!vendeur) {
+      return res.status(404).json({ message: "Vendeur introuvable" });
+    }
+
+    // 🔥 Si déjà en attente → on modifie juste la demande
+    vendeur.pack_demande = nouveau_pack;
+    vendeur.statut_demande_pack = "en_attente";
+
+    await vendeur.save();
+
+    res.json({
+      message: vendeur.statut_demande_pack === "en_attente"
+        ? "Demande modifiée avec succès ✅"
+        : "Demande envoyée à l'admin ✅"
+    });
+
+  } catch (error) {
+    res.status(500).json({ message: "Erreur serveur" });
+  }
+}
+
+// Récupérer les demandes de l'utilisateur connecté
+export const getMesDemandesPack = async (req, res) => {
+  try {
+    const vendeur = await Vendeur.findOne({ 
+      where: { id_user: req.user.id },
+      attributes: ['pack_cle', 'pack_demande', 'statut_demande_pack']
+    });
+
+    res.json({
+      pack_actuel: vendeur?.pack_cle || 'aucun',
+      pack_demande: vendeur?.pack_demande || null,
+      statut_demande: vendeur?.statut_demande_pack || 'aucune'
+    });
+  } catch (error) {
+    res.status(500).json({ message: "Erreur serveur", error: error.message });
+  }
+};
+
+// Récupérer toutes les demandes en attente (admin)
+export const getDemandesPackEnAttente = async (req, res) => {
+  try {
+    const demandes = await Vendeur.findAll({
+      where: { statut_demande_pack: 'en_attente' },
+      include: [{
+        model: User,
+        as: 'utilisateur',
+        attributes: ['id', 'nom', 'email', 'telephone']
+      }],
+      attributes: ['id_user', 'pack_cle', 'pack_demande', 'statut_demande_pack', 'modifie_le']
+    });
+
+    res.json(demandes.map(d => ({
+      id_user: d.id_user,
+      vendeur_nom: d.utilisateur?.nom,
+      vendeur_email: d.utilisateur?.email,
+      pack_actuel: d.pack_cle || 'aucun',
+      pack_demande: d.pack_demande,
+      date_demande: d.modifie_le,
+      statut: d.statut_demande_pack
+    })));
+  } catch (error) {
+    res.status(500).json({ message: "Erreur serveur", error: error.message });
+  }
+};
+
+export async function annulerDemandePack(req, res) {
+  try {
+    const vendeur = await Vendeur.findOne({
+      where: { id_user: req.user.id }
+    });
+
+    if (!vendeur) {
+      return res.status(404).json({ message: "Vendeur introuvable" });
+    }
+
+    if (vendeur.statut_demande_pack !== "en_attente") {
+      return res.status(400).json({ message: "Aucune demande à annuler" });
+    }
+
+    vendeur.pack_demande = null;
+    vendeur.statut_demande_pack = "aucune";
+
+    await vendeur.save();
+
+    res.json({ message: "Demande annulée avec succès ✅" });
+
+  } catch (error) {
+    res.status(500).json({ message: "Erreur serveur" });
+  }
+}

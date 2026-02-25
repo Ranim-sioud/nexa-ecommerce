@@ -529,3 +529,46 @@ export const getAdminDashboard = async (req, res) => {
     res.status(500).json({ message: 'Erreur serveur' });
   }
 }
+
+// Traiter une demande de pack (approuver/refuser) - admin
+export async function traiterDemandePack(req, res) {
+  try {
+    const { userId } = req.params;
+    const { decision } = req.body;
+
+    if (!["approuvee", "refusee"].includes(decision)) {
+      return res.status(400).json({ message: "Action invalide" });
+    }
+
+    const vendeur = await Vendeur.findOne({
+      where: { id_user: userId }
+    });
+
+    if (!vendeur) {
+      return res.status(404).json({ message: "Vendeur introuvable" });
+    }
+
+    if (vendeur.statut_demande_pack !== "en_attente") {
+      return res.status(400).json({
+        message: "Aucune demande en attente"
+      });
+    }
+
+    if (decision === "approuvee") {
+      vendeur.pack_cle = vendeur.pack_demande;
+      vendeur.statut_demande_pack = "approuvee";
+    } else {
+      vendeur.statut_demande_pack = "refusee";
+    }
+
+    vendeur.pack_demande = null;
+
+    await vendeur.save();
+
+    res.json({ message: `Demande ${decision} avec succès ✅` });
+
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Erreur serveur" });
+  }
+}

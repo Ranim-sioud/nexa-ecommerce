@@ -1,7 +1,10 @@
 import sequelize from "./config/database.js";
+import Fournisseur from "./models/Fournisseur.js";
 import User from "./models/User.js";
 import TicketsType from "./models/TicketsType.js";
 import argon2 from 'argon2';
+import dotenv from "dotenv";
+dotenv.config();
 
 async function seed() {
   try {
@@ -108,8 +111,36 @@ async function seed() {
       adresse: defaultAdresse,
     });
 
-    // ✅ Création de l'admin (pour type Autre)
-    let admin = await User.findOne({ where: { role: "admin" } });
+    // 🔐 Hash commun pour les mots de passe
+    const passwordHashAdmin = await argon2.hash(process.env.ADMIN_PASSWORD, {
+      type: argon2.argon2id,
+    });
+
+    // ✅ Création de l'admin à partir des variables d'environnement
+    const admin = await User.create({
+      nom: process.env.ADMIN_NOM,
+      email: process.env.ADMIN_EMAIL,
+      telephone: process.env.ADMIN_TELEPHONE,
+      mot_de_passe: passwordHashAdmin,
+      role: "admin",
+      ville: process.env.ADMIN_VILLE,
+      gouvernorat: process.env.ADMIN_GOUVERNORAT,
+      adresse: process.env.ADMIN_ADRESSE,
+      actif: true,
+      validation: true,
+    });
+
+    // 🔑 Générer identifiant_public et créer Fournisseur
+    const identifiantPublic = `PUB-${admin.id}-${Math.random()
+      .toString(36)
+      .slice(2, 8)
+      .toUpperCase()}`;
+
+    await Fournisseur.create({
+      id_user: admin.id,
+      identifiant_public: identifiantPublic,
+      solde_portefeuille: 0,
+    });
 
     // ✅ Création des types de tickets avec mapping
     await TicketsType.bulkCreate([

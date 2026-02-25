@@ -27,6 +27,10 @@ export default function Settings() {
     profileImage: "",
     codeParrainage: "",  // 🔹 code
     lienParrainage: "",
+    pack_cle: "",
+    pack_demande: "",
+    statut_demande_pack: "aucune",
+    
   });
 
   const [passwordData, setPasswordData] = useState({
@@ -34,37 +38,54 @@ export default function Settings() {
     newPassword: "",
     confirmPassword: "",
   });
+  const [packs, setPacks] = useState([]);
+  const [selectedPack, setSelectedPack] = useState("");
+
+  const fetchUser = async () => {
+    try {
+      const res = await api.get("/users/me");    
+      const userData = {
+        id: res.data.id,
+        name: res.data.nom,
+        email: res.data.email,
+        phone: res.data.telephone || "",
+        role: res.data.role || "",
+        governorate: res.data.gouvernorat || "",
+        city: res.data.ville || "",
+        address: res.data.adresse || "",
+        bankAccount: res.data.rib || "",
+        nom_boutique: res.data.nom_boutique || "",
+        profileImage: res.data.image_url || "",
+        codeParrainage: res.data.code_parrainage || "",
+        lienParrainage: `http://localhost:3000/auth/signup?code=${res.data.code_parrainage || ""}`,
+        pack_cle: res.data.pack_cle || "",
+        pack_demande: res.data.pack_demande || "",
+        statut_demande_pack: res.data.statut_demande_pack || "aucune",
+      };    
+      setUserInfo(userData);
+      setSelectedPack(userData.pack_demande || userData.pack_cle || "");    
+    } catch (err) {
+      toast.error("Impossible de charger votre profil ❌");
+    }
+  };
 
   useEffect(() => {
-    const fetchUser = async () => {
-      try {
-        const res = await api.get("/users/me");
-
-        const userData = {
-          id: res.data.id,
-          name: res.data.nom,
-          email: res.data.email,
-          phone: res.data.telephone || "",
-          role: res.data.role || "",
-          governorate: res.data.gouvernorat || "",
-          city: res.data.ville || "",
-          address: res.data.adresse || "",
-          bankAccount: res.data.rib || "",
-          nom_boutique: res.data.vendeur?.nom_boutique || "",
-          profileImage: res.data.image_url || "",
-          codeParrainage: res.data.vendeur?.code_parrainage || "", // 🔹
-          lienParrainage: `http://localhost:3000/auth/signup?code=${res.data.vendeur?.code_parrainage || ""}`,
-        };
-         console.log("userData", userData);
-        setUserInfo(userData);
-        localStorage.setItem("user", JSON.stringify(userData));
-      } catch (err) {
-        console.error(err);
-        toast.error("Impossible de charger votre profil ❌");
-      }
-    };
     fetchUser();
   }, []);
+
+
+  useEffect(() => {
+    fetchPacks();
+  }, []);
+  
+  const fetchPacks = async () => {
+    try {
+      const res = await api.get("/packs");
+      setPacks(res.data);
+    } catch (err) {
+      console.error(err);
+    }
+  };
 
   const handleInputChange = (field, value) => {
     setUserInfo((prev) => ({ ...prev, [field]: value }));
@@ -103,6 +124,34 @@ export default function Settings() {
       toast.error(err.response?.data?.message || "Erreur lors de la mise à jour ❌");
     }
   };
+
+  const handleDemandePack = async () => {
+  try {
+    await api.post("/users/demander", {
+      nouveau_pack: selectedPack
+    });
+
+    toast.success("Demande mise à jour ✅");
+
+    await fetchUser(); // 🔥 rafraîchit automatiquement
+
+  } catch (err) {
+    toast.error(err.response?.data?.message);
+  }
+};
+
+const handleAnnulerDemande = async () => {
+  try {
+    await api.post("/users/annuler-demande");
+
+    toast.success("Demande annulée ✅");
+
+    await fetchUser(); // 🔥 rafraîchit
+
+  } catch (err) {
+    toast.error(err.response?.data?.message);
+  }
+};
 
   const handleChangeImage = async () => {
     const input = document.createElement("input");
@@ -365,6 +414,61 @@ export default function Settings() {
           </div>
         </CardContent>
       </Card>
+      {userInfo.role === "vendeur" && (
+        <Card className="rounded-xl shadow-md border border-gray-200">
+          <CardContent className="p-6">
+            <h3 className="text-lg font-semibold mb-4">Pack actuel</h3>
+            <Input value={userInfo.pack_cle} readOnly />
+          </CardContent>
+        </Card>
+      )}
+      {userInfo.role === "vendeur" && (
+        <Card>
+          <CardContent className="p-6">
+            <h3 className="text-lg font-semibold mb-4">
+              Changer de pack
+            </h3>
+      
+            <select
+              value={selectedPack}
+              onChange={(e) => setSelectedPack(e.target.value)}
+              className="border p-2 rounded w-full"
+            >
+              <option value="">Choisir un pack</option>
+      
+              {packs.map((pack) => (
+                <option key={pack.id} value={pack.cle}>
+                  {pack.titre} - {pack.prix}dt
+                </option>
+              ))}
+      
+            </select>
+      
+            <Button
+              className="mt-4"
+              onClick={handleDemandePack}
+              disabled={!selectedPack}
+            >
+              {userInfo.statut_demande_pack === "en_attente"
+                ? "Modifier la demande"
+                : "Envoyer la demande"}
+            </Button>
+            <Button
+                variant="destructive"
+                className="ml-4"
+                onClick={handleAnnulerDemande}
+              >
+                Annuler la demande
+              </Button>
+      
+            {userInfo.statut_demande_pack === "en_attente" && (
+              <p className="text-pink-600 mt-2">
+                Demande en attente de validation ⏳
+              </p>
+            )}
+          </CardContent>
+        </Card>
+      )}
 
       {/* Sauvegarde */}
       <div className="flex justify-end">

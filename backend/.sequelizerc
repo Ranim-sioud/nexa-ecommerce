@@ -1,0 +1,9 @@
+// .sequelizerc
+const path = require('path');
+
+module.exports = {
+  'config': path.resolve('config', 'config.cjs'),  // Chemin vers votre config
+  'models-path': path.resolve('models'),           // Dossier des modèles
+  'migrations-path': path.resolve('migrations'),    // Dossier des migrations
+  'seeders-path': path.resolve('seeders')          // Dossier des seeders
+};
