@@ -1,40 +1,51 @@
+name: nexa-app
+
 services:
-  postgres:
-    image: postgres:15-alpine
+  db:
+    image: postgres:16-alpine  # 16 est stable & rapide en 2026
+    restart: unless-stopped
     environment:
-      POSTGRES_USER: nexadb
-      POSTGRES_PASSWORD: example
-      POSTGRES_DB: nexa
-    ports:
-      - "5432:5432"
+      POSTGRES_USER:     ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB:       ${POSTGRES_DB}
     volumes:
-      - postgres-data:/var/lib/postgresql/data
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 3s
+      retries: 8
+    # ports: ["5433:5432"]   # décommente uniquement si besoin d'accès pgAdmin/local
 
   backend:
     build:
       context: ./backend
-    ports:
-      - "4001:4001"
+      dockerfile: Dockerfile
+      target: production          # on build que le stage prod par défaut
+    restart: unless-stopped
+    expose:
+      - "4001"
     environment:
-      - NODE_ENV=development
-      - PORT=4001
-      - DATABASE_URL=postgres://nexadb:example@postgres:5432/nexa
-      - FRONTEND_URL=http://localhost:3000
+      NODE_ENV:       ${NODE_ENV:-production}
+      PORT:           ${PORT}
+      DATABASE_URL:   ${DATABASE_URL}
+      JWT_SECRET:     ${JWT_SECRET:?required}
+      JWT_EXPIRES_IN: ${JWT_EXPIRES_IN}
+      BCRYPT_SALT:    ${BCRYPT_SALT}
+      # Ajoute les autres (Cloudinary, email…) au fur et à mesure
     depends_on:
-      - postgres
-    volumes:
-      - ./backend:/app
-    command: npm run dev
+      db:
+        condition: service_healthy
 
   frontend:
     build:
       context: ./Ecommerce
-    ports:
-      - "3000:80"
-    depends_on:
-      - backend
-    volumes:
-      - ./Ecommerce:/app
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    expose:
+      - "80"
+    # ports:
+    #   - "3000:80"          # décommente en dev si tu veux tester sans reverse-proxy
 
 volumes:
-  postgres-data:
+  pgdata:

@@ -1,0 +1,11 @@
+services:
+  backend:
+    build:
+      target: development
+    volumes:
+      - ./backend:/app
+      - /app/node_modules
+    ports:
+      - "4001:4001"
+    environment:
+      NODE_ENV: development
