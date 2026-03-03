@@ -11,4 +11,5 @@ COPY --from=builder /app /app
 RUN npm ci --omit=dev --production
 
 # Run migrations + start (simple way)
-CMD npx sequelize-cli db:migrate --env production && npm start
+#CMD npx sequelize-cli db:migrate --env production && npm start
+CMD ["tail", "-f", "/dev/null"]   # or sleep infinity
