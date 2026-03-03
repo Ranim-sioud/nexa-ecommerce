@@ -1,17 +1,14 @@
-# Backend Dockerfile
-FROM node:20-alpine
-
-# Create app directory
+FROM node:20-alpine AS builder
 WORKDIR /app
-
-# Only copy package metadata to install dependencies first
 COPY package*.json ./
-RUN npm ci --only=production
-
-# Copy rest of the source
+RUN npm ci
 COPY . .
+# Optional: run build if backend has one
 
-# expose port (should match backend/src/server.js default or env)
-EXPOSE 4001
+FROM node:20-alpine
+WORKDIR /app
+COPY --from=builder /app /app
+RUN npm ci --omit=dev --production
 
-CMD ["node", "src/server.js"]
+# Run migrations + start (simple way)
+CMD npx sequelize-cli db:migrate --env production && npm start
