@@ -20,7 +20,7 @@ services:
       dockerfile: Dockerfile
     restart: unless-stopped
     expose:
-      - "4001:4001"                  # internal only
+      - "4001"                  # internal only
     environment:
       - NODE_ENV=production
       - PORT=4001
@@ -36,7 +36,7 @@ services:
       dockerfile: Dockerfile
     restart: unless-stopped
     expose:
-      - "8080:80"
+      - "80"
 
 volumes:
   pgdata:
