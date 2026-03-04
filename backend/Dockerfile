@@ -17,4 +17,4 @@ RUN npm ci --omit=dev --ignore-scripts --prefer-offline
 USER node
 
 # Lancement migrations + serveur
-CMD ["sh", "-c", "npx sequelize-cli db:migrate && npm start"]
+CMD ["sh", "-c", "npx sequelize-cli db:migrate --debug && npm start"]
