@@ -17,6 +17,7 @@ services:
       retries: 8
     # ports: ["5433:5432"]   # décommente uniquement si besoin d'accès pgAdmin/local
 
+
   backend:
     build:
       context: ./backend
@@ -26,8 +27,8 @@ services:
     expose:
       - "4001"
     environment:
-      NODE_ENV:       ${NODE_ENV:-production}
-      PORT:           ${PORT}
+      NODE_ENV:       production
+      PORT:           4000
       DATABASE_URL:   ${DATABASE_URL}
       JWT_SECRET:     ${JWT_SECRET:?required}
       JWT_EXPIRES_IN: ${JWT_EXPIRES_IN}
