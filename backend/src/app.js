@@ -108,65 +108,14 @@ app.use('/api/commande', commandesRoutes);
 // health
 app.get('/', (req,res)=> res.json({ ok: true }));
 
-/* const runMigrations = async () => {
-  const migrator = new Umzug({
-    migrations: {
-      glob: 'migrations/*.js',  // Chemin vers vos fichiers de migration
-      resolve: ({ name, path, context }) => {
-        const migration = require(path);
-        return {
-          name,
-          up: async () => migration.up(context, Sequelize),
-          down: async () => migration.down(context, Sequelize),
-        };
-      },
-    },
-    context: sequelize.getQueryInterface(),
-    storage: new SequelizeStorage({ 
-      sequelize,
-      tableName: 'SequelizeMeta'  // Table qui garde l'historique des migrations
-    }),
-    logger: console,
-  });
-
-  try {
-    const migrations = await migrator.up();
-    console.log('Migrations exécutées avec succès :', migrations.map(m => m.name).join(', '));
-  } catch (error) {
-    console.error('Erreur lors des migrations :', error);
-    throw error;
-  }
-};
- */
-// Initialisation de la base de données
+// Verify DB connection on boot. Migrations are run by the Dockerfile CMD
+// before `npm start` (npx sequelize-cli db:migrate && npm start).
 (async () => {
   try {
-    const isProd = process.env.NODE_ENV === "production";
-    
-    // Authentification
     await sequelize.authenticate();
     console.log('✅ Connexion DB établie');
-    
-    if (!isProd) {
-      // EN DÉVELOPPEMENT : synchronisation automatique (pratique mais risquée)
-      console.log('⚠️ Mode développement : utilisation de sync()');
-      
-      // Option 1 : sync simple (crée les tables si elles n'existent pas)
-      // await sequelize.sync({ alter: true });
-      console.log('✅ Synchronisation des modèles effectuée');
-      
-      // Option 2 : migrations en développement (recommandé pour tester)
-      // await runMigrations();
-    } else {
-      // EN PRODUCTION : migrations uniquement !
-      console.log('🚀 Mode production : exécution des migrations');
-      await runMigrations();
-    }
-    
-    console.log('✅ Base de données prête');
-    
   } catch (err) {
-    console.error('❌ Erreur de base de données :', err);
+    console.error('❌ Erreur de connexion DB :', err);
     process.exit(1);
   }
 })();

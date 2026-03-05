@@ -22,19 +22,34 @@ services:
     build:
       context: ./backend
       dockerfile: Dockerfile
-      target: production          # on build que le stage prod par défaut
+      target: production
     restart: unless-stopped
-    expose:
-      - "4001"
+    ports:
+      - "127.0.0.1:4001:4001"   # only reachable from localhost (nginx reverse-proxy)
     environment:
       NODE_ENV:       production
-      PORT:           4000
+      PORT:           4001
       DOCKER_ENV:     true
       DATABASE_URL:   postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
+      POSTGRES_USER:  ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB:    ${POSTGRES_DB}
       JWT_SECRET:     ${JWT_SECRET:?required}
-      JWT_EXPIRES_IN: ${JWT_EXPIRES_IN}
-      BCRYPT_SALT:    ${BCRYPT_SALT}
-      # Ajoute les autres (Cloudinary, email…) au fur et à mesure
+      JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-15m}
+      BCRYPT_SALT:    ${BCRYPT_SALT:-12}
+      FRONTEND_URL:   ${FRONTEND_URL:-https://nexa-tn.com}
+      # Admin seed vars (only needed on first deploy / manual seed run)
+      ADMIN_NOM:          ${ADMIN_NOM:-Admin}
+      ADMIN_EMAIL:        ${ADMIN_EMAIL:?required}
+      ADMIN_PASSWORD:     ${ADMIN_PASSWORD:?required}
+      ADMIN_TELEPHONE:    ${ADMIN_TELEPHONE:-20000000}
+      ADMIN_VILLE:        ${ADMIN_VILLE:-Tunis}
+      ADMIN_GOUVERNORAT:  ${ADMIN_GOUVERNORAT:-Tunis}
+      ADMIN_ADRESSE:      ${ADMIN_ADRESSE:-Tunis, Tunisie}
+      # Cloudinary / Email / Twilio — add your values in .env
+      CLOUDINARY_CLOUD_NAME:  ${CLOUDINARY_CLOUD_NAME:-}
+      CLOUDINARY_API_KEY:     ${CLOUDINARY_API_KEY:-}
+      CLOUDINARY_API_SECRET:  ${CLOUDINARY_API_SECRET:-}
     depends_on:
       db:
         condition: service_healthy
@@ -43,11 +58,11 @@ services:
     build:
       context: ./Ecommerce
       dockerfile: Dockerfile
+      args:
+        VITE_API_URL: ${VITE_API_URL:-https://nexa-tn.com/api}
     restart: unless-stopped
-    expose:
-      - "80"
-    # ports:
-    #   - "3000:80"          # décommente en dev si tu veux tester sans reverse-proxy
+    ports:
+      - "127.0.0.1:3000:80"   # only reachable from localhost (nginx reverse-proxy)
 
 volumes:
   pgdata:

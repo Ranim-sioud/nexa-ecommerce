@@ -1,0 +1,64 @@
+name: Deploy to Contabo VPS
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:   # allow manual trigger from GitHub UI
+
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false   # never cancel a running deploy mid-flight
+
+jobs:
+  deploy:
+    name: Build & Deploy
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      # ── 1. Checkout ──────────────────────────────────────────────────────────
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # ── 2. SSH deploy ────────────────────────────────────────────────────────
+      # All heavy work runs ON the VPS so we don't have to push images anywhere.
+      # The VPS pulls the latest code and rebuilds containers in place.
+      - name: Deploy via SSH
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host:     ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key:      ${{ secrets.VPS_SSH_KEY }}
+          port:     ${{ secrets.VPS_PORT || 22 }}
+          # Keep each command on one line; the action runs them in sequence.
+          script: |
+            set -e
+
+            cd ${{ secrets.APP_DIR || '~/nexa-ecommerce' }}
+
+            echo "==> Pulling latest code..."
+            git pull origin main
+
+            echo "==> Copying .env if not present..."
+            [ -f .env ] || { echo "ERROR: .env missing on server"; exit 1; }
+
+            echo "==> Building and starting containers..."
+            docker compose build --no-cache
+            docker compose up -d --remove-orphans
+
+            echo "==> Waiting for backend to be healthy..."
+            sleep 8
+            docker compose exec -T backend node -e "require('http').get('http://localhost:4001/api/health', r => { process.exit(r.statusCode === 200 ? 0 : 1) })" || \
+              (docker compose logs backend --tail 50 && exit 1)
+
+            echo "==> Running database migrations..."
+            docker compose exec -T backend npx sequelize-cli db:migrate --config config/config.cjs
+
+            echo "==> Deploy complete!"
+
+      # ── 3. Notify on failure ─────────────────────────────────────────────────
+      - name: Notify failure
+        if: failure()
+        run: |
+          echo "Deploy failed. Check the logs above."
+          # Add Slack / email notification here if needed.
