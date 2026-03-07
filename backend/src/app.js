@@ -92,12 +92,13 @@ app.get('/api/health', async (req, res) => {
 } */
 app.use(rateLimit({ windowMs: 60*1000, max: 200 }));
 
+// Raw spec must be registered before swagger-ui middleware to avoid interception
+app.get('/api/docs/spec.json', (req, res) => res.json(swaggerSpec));
 // Public API documentation — no auth required
 app.use('/api/docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec, {
   customSiteTitle: 'Nexa API Docs',
   swaggerOptions: { persistAuthorization: true },
 }));
-app.get('/api/docs/spec.json', (req, res) => res.json(swaggerSpec));
 
 // routes
 app.use('/api/auth', authRoutes);
