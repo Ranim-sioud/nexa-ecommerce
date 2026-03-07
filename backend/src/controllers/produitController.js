@@ -1,3 +1,4 @@
+import logger from '../config/logger.js';
 import Produit from "../models/Produit.js";
 import Variation from "../models/Variation.js";
 import Media from "../models/Media.js";
@@ -150,7 +151,7 @@ export async function createProduit(req, res) {
 
     res.status(201).json({ message: "Produit créé avec succès", produit: produitWithRels });
   } catch (err) {
-    console.error("Erreur createProduit :", err);
+    logger.error("Erreur createProduit :", err);
     res.status(500).json({ message: "Erreur serveur", error: err.message });
   }
 }
@@ -172,7 +173,7 @@ export async function getProduits(req, res) {
 
     res.json(produits);
   } catch (err) {
-    console.error(err);
+    logger.error(err);
     res.status(500).json({ message: "Erreur serveur" });
   }
 }
@@ -380,13 +381,13 @@ export async function updateProduit(req, res) {
 
     res.json({ message: "Produit mis à jour", produit: updatedProduit });
   } catch (err) {
-    console.error("Erreur updateProduit :", err);
+    logger.error("Erreur updateProduit :", err);
     res.status(500).json({ message: "Erreur serveur", error: err.message });
   }
 }
 
 export const deleteProduit = async (req, res) => {
-  console.log("=== DEBUT deleteProduit ===");
+  logger.info("=== DEBUT deleteProduit ===");
 
   const t = await sequelize.transaction();
 
@@ -394,7 +395,7 @@ export const deleteProduit = async (req, res) => {
     const { id } = req.params;
     const userId = req.user?.id;
 
-    console.log(`🗑️ Suppression produit ID: ${id}, Fournisseur ID: ${userId}`);
+    logger.info(`🗑️ Suppression produit ID: ${id}, Fournisseur ID: ${userId}`);
 
     // 1. Vérifier si le produit existe et appartient au fournisseur
     const produit = await Produit.findOne({
@@ -410,7 +411,7 @@ export const deleteProduit = async (req, res) => {
       });
     }
 
-    console.log(`✅ Produit trouvé: ${produit.nom}`);
+    logger.info(`✅ Produit trouvé: ${produit.nom}`);
 
     // 2. Récupérer toutes les lignes de commande liées à ce produit
     const lignes = await LigneCommande.findAll({
@@ -428,7 +429,7 @@ export const deleteProduit = async (req, res) => {
       transaction: t
     });
 
-    console.log(`📊 ${lignes.length} ligne(s) de commande trouvée(s) pour ce produit`);
+    logger.info(`📊 ${lignes.length} ligne(s) de commande trouvée(s) pour ce produit`);
 
     // 3. Grouper les données par sous-commande et commande
     const sousCommandesData = new Map(); // id_sous_commande -> {data}
@@ -475,15 +476,15 @@ export const deleteProduit = async (req, res) => {
         where: { id: { [Op.in]: allLigneIds } },
         transaction: t
       });
-      console.log(`✅ ${allLigneIds.length} ligne(s) de commande supprimée(s)`);
+      logger.info(`✅ ${allLigneIds.length} ligne(s) de commande supprimée(s)`);
     }
 
     // 5. Vérifier chaque sous-commande pour voir si elle a encore des lignes
-    console.log("\n=== Vérification des sous-commandes ===");
+    logger.info("\n=== Vérification des sous-commandes ===");
     const sousCommandesASupprimer = new Set();
     
     for (const [sousCommandeId, data] of sousCommandesData) {
-      console.log(`🔍 Vérification sous-commande ${sousCommandeId}:`);
+      logger.info(`🔍 Vérification sous-commande ${sousCommandeId}:`);
       
       // Vérifier si la sous-commande a d'autres lignes (autres que celles supprimées)
       const autresLignes = await LigneCommande.count({
@@ -494,14 +495,14 @@ export const deleteProduit = async (req, res) => {
         transaction: t
       });
       
-      console.log(`   Autres lignes dans cette sous-commande: ${autresLignes}`);
+      logger.info(`   Autres lignes dans cette sous-commande: ${autresLignes}`);
       
       if (autresLignes === 0) {
         // Sous-commande vide → à supprimer
         sousCommandesASupprimer.add(sousCommandeId);
-        console.log(`   ❌ Sous-commande ${sousCommandeId} sera supprimée (vide)`);
+        logger.info(`   ❌ Sous-commande ${sousCommandeId} sera supprimée (vide)`);
       } else {
-        console.log(`   ✅ Sous-commande ${sousCommandeId} conservée (contient ${autresLignes} autres lignes)`);
+        logger.info(`   ✅ Sous-commande ${sousCommandeId} conservée (contient ${autresLignes} autres lignes)`);
       }
     }
 
@@ -511,15 +512,15 @@ export const deleteProduit = async (req, res) => {
         where: { id: { [Op.in]: Array.from(sousCommandesASupprimer) } },
         transaction: t
       });
-      console.log(`✅ ${sousCommandesASupprimer.size} sous-commande(s) supprimée(s)`);
+      logger.info(`✅ ${sousCommandesASupprimer.size} sous-commande(s) supprimée(s)`);
     }
 
     // 7. Vérifier chaque commande pour voir si elle a encore des sous-commandes
-    console.log("\n=== Vérification des commandes ===");
+    logger.info("\n=== Vérification des commandes ===");
     const commandesASupprimer = new Set();
     
     for (const [commandeId, data] of commandesData) {
-      console.log(`🔍 Vérification commande ${commandeId} (état: ${data.etat}):`);
+      logger.info(`🔍 Vérification commande ${commandeId} (état: ${data.etat}):`);
       
       // Vérifier si la commande a d'autres sous-commandes
       const autresSousCommandes = await SousCommande.count({
@@ -530,33 +531,33 @@ export const deleteProduit = async (req, res) => {
         transaction: t
       });
       
-      console.log(`   Autres sous-commandes dans cette commande: ${autresSousCommandes}`);
+      logger.info(`   Autres sous-commandes dans cette commande: ${autresSousCommandes}`);
       
       // Vérifier les sous-commandes qui vont être supprimées
       const sousCommandesDeCetteCommandeASupprimer = Array.from(data.sousCommandeIds).filter(
         id => sousCommandesASupprimer.has(id)
       );
       
-      console.log(`   Sous-commandes de cette commande à supprimer: ${sousCommandesDeCetteCommandeASupprimer.length}`);
+      logger.info(`   Sous-commandes de cette commande à supprimer: ${sousCommandesDeCetteCommandeASupprimer.length}`);
       
       // Calculer combien de sous-commandes resteront après suppression
       const sousCommandesRestantes = autresSousCommandes + 
         (data.sousCommandeIds.size - sousCommandesDeCetteCommandeASupprimer.length);
       
-      console.log(`   Sous-commandes qui resteront après suppression: ${sousCommandesRestantes}`);
+      logger.info(`   Sous-commandes qui resteront après suppression: ${sousCommandesRestantes}`);
       
       // Ne pas supprimer les commandes livrées ou en cours de livraison
       if (data.etat === "livree" || data.etat === "en_cours_livraison") {
-        console.log(`   ⚠️ Commande ${commandeId} en état "${data.etat}" → CONSERVÉE`);
+        logger.info(`   ⚠️ Commande ${commandeId} en état "${data.etat}" → CONSERVÉE`);
         continue;
       }
       
       // Si plus de sous-commandes après suppression
       if (sousCommandesRestantes === 0) {
         commandesASupprimer.add(commandeId);
-        console.log(`   ❌ Commande ${commandeId} sera supprimée (plus de sous-commandes)`);
+        logger.info(`   ❌ Commande ${commandeId} sera supprimée (plus de sous-commandes)`);
       } else {
-        console.log(`   ✅ Commande ${commandeId} conservée (aura ${sousCommandesRestantes} sous-commandes)`);
+        logger.info(`   ✅ Commande ${commandeId} conservée (aura ${sousCommandesRestantes} sous-commandes)`);
       }
     }
 
@@ -566,7 +567,7 @@ export const deleteProduit = async (req, res) => {
         where: { id: { [Op.in]: Array.from(commandesASupprimer) } },
         transaction: t
       });
-      console.log(`✅ ${commandesASupprimer.size} commande(s) supprimée(s)`);
+      logger.info(`✅ ${commandesASupprimer.size} commande(s) supprimée(s)`);
       
       // Supprimer les clients associés aux commandes supprimées
       for (const commandeId of commandesASupprimer) {
@@ -586,24 +587,24 @@ export const deleteProduit = async (req, res) => {
               where: { id: data.clientId },
               transaction: t
             });
-            console.log(`✅ Client ${data.clientId} supprimé (plus de commandes)`);
+            logger.info(`✅ Client ${data.clientId} supprimé (plus de commandes)`);
           } else {
-            console.log(`⚠️ Client ${data.clientId} conservé (a ${autresCommandesDuClient} autres commandes)`);
+            logger.info(`⚠️ Client ${data.clientId} conservé (a ${autresCommandesDuClient} autres commandes)`);
           }
         }
       }
     }
 
     // 9. Supprimer les dépendances du produit
-    console.log("\n=== Suppression des dépendances du produit ===");
+    logger.info("\n=== Suppression des dépendances du produit ===");
     
     // Supprimer MesProduit
     await MesProduit.destroy({ where: { id_produit: id }, transaction: t });
-    console.log("✅ MesProduit supprimé");
+    logger.info("✅ MesProduit supprimé");
 
     // Supprimer Variations
     await Variation.destroy({ where: { id_produit: id }, transaction: t });
-    console.log("✅ Variations supprimées");
+    logger.info("✅ Variations supprimées");
 
     // Supprimer Media + Cloudinary
     const medias = await Media.findAll({ where: { id_produit: id }, transaction: t });
@@ -614,16 +615,16 @@ export const deleteProduit = async (req, res) => {
             resource_type: media.type === "video" ? "video" : "image"
           });
         } catch (err) {
-          console.warn(`⚠️ Erreur Cloudinary: ${err.message}`);
+          logger.warn(`⚠️ Erreur Cloudinary: ${err.message}`);
         }
       }
     }
     await Media.destroy({ where: { id_produit: id }, transaction: t });
-    console.log("✅ Médias supprimés");
+    logger.info("✅ Médias supprimés");
 
     // 10. Supprimer le produit
     await Produit.destroy({ where: { id }, transaction: t });
-    console.log(`✅ Produit ${id} supprimé`);
+    logger.info(`✅ Produit ${id} supprimé`);
 
     await t.commit();
 
@@ -635,7 +636,7 @@ export const deleteProduit = async (req, res) => {
 
   } catch (error) {
     await t.rollback();
-    console.error("❌ ERREUR deleteProduit:", error);
+    logger.error("❌ ERREUR deleteProduit:", error);
     return res.status(500).json({
       success: false,
       message: "Erreur lors de la suppression du produit",
@@ -715,8 +716,8 @@ export const deleteProduit = async (req, res) => {
     const totalItems = await Produit.count();
     const totalPages = Math.ceil(totalItems / limit);
     
-    console.log('Produits chargés:', produitsAvecRelations.length);
-    console.log('Fournisseurs uniques:', fournisseurIds);
+    logger.info('Produits chargés:', produitsAvecRelations.length);
+    logger.info('Fournisseurs uniques:', fournisseurIds);
 
     res.json({
       produits: produitsAvecRelations || [],
@@ -728,7 +729,7 @@ export const deleteProduit = async (req, res) => {
     });
 
   } catch (err) {
-    console.error("Erreur getAllProduitsVendeurs:", err);
+    logger.error("Erreur getAllProduitsVendeurs:", err);
     res.status(500).json({ message: "Erreur serveur", error: err.message });
   }
 }
@@ -738,7 +739,7 @@ export async function getProduitById(req, res) {
   
   try {
     const produitId = req.params.id;
-    console.log(`🔄 getProduitById appelé pour produit: ${produitId}`);
+    logger.info(`🔄 getProduitById appelé pour produit: ${produitId}`);
 
     // Étape 1 : récupérer le produit principal avec toutes les infos
     const produit = await Produit.findByPk(produitId, {
@@ -754,7 +755,7 @@ export async function getProduitById(req, res) {
       return res.status(404).json({ message: "Produit non trouvé" });
     }
 
-    console.log(`✅ Produit trouvé: ${produit.nom}`);
+    logger.info(`✅ Produit trouvé: ${produit.nom}`);
 
     // Étape 2 : récupérer toutes les relations en PARALLÈLE
     const [medias, variations, categorie, fournisseur] = await Promise.all([
@@ -790,7 +791,7 @@ export async function getProduitById(req, res) {
       })
     ]);
 
-    console.log(`📊 Relations chargées: ${medias.length} médias, ${variations.length} variations`);
+    logger.info(`📊 Relations chargées: ${medias.length} médias, ${variations.length} variations`);
 
     // Étape 3 : assembler le résultat
     const result = {
@@ -806,13 +807,13 @@ export async function getProduitById(req, res) {
 
     await t.commit();
     
-    console.log(`✅ Produit ${produitId} chargé avec succès`);
+    logger.info(`✅ Produit ${produitId} chargé avec succès`);
     res.json(result);
 
   } catch (err) {
     await t.rollback();
     
-    console.error('💥 ERREUR getProduitById:', {
+    logger.error('💥 ERREUR getProduitById:', {
       message: err.message,
       name: err.name,
       produitId: req.params.id,

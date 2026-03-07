@@ -1,3 +1,4 @@
+import logger from '../config/logger.js';
 import { DemandeRetrait, Vendeur, Fournisseur, Transaction, User } from "../models/index.js";
 import sequelize from "../config/database.js";
 
@@ -40,8 +41,8 @@ export const createDemande = async (req, res) => {
         .json({ error: "Compte utilisateur introuvable" });
 
     const solde = parseFloat(account.solde_portefeuille || 0);
-    console.log('solde', solde)
-    console.log('montantNum', montantNum)
+    logger.info('solde', solde)
+    logger.info('montantNum', montantNum)
     if (montantNum > solde)
       return res
         .status(400)
@@ -62,7 +63,7 @@ export const createDemande = async (req, res) => {
         "Demande de retrait enregistrée avec succès et en attente de validation",
     });
   } catch (err) {
-    console.error("Erreur création retrait:", err);
+    logger.error("Erreur création retrait:", err);
     return res.status(500).json({ error: "Erreur serveur" });
   }
 };
@@ -78,7 +79,7 @@ export const listUserDemandes = async (req, res) => {
     });
     return res.json({ demandes });
   } catch (err) {
-    console.error(err);
+    logger.error(err);
     return res.status(500).json({ error: "Erreur serveur" });
   }
 };
@@ -115,7 +116,7 @@ export const listAllDemandes = async (req, res) => {
     
     return res.json({ demandes: demandesFormatees });
   } catch (err) {
-    console.error(err);
+    logger.error(err);
     return res.status(500).json({ error: "Erreur serveur" });
   }
 };
@@ -200,7 +201,7 @@ export const updateStatut = async (req, res) => {
 
     return res.json({ message: "Statut mis à jour avec succès" });
   } catch (err) {
-    console.error("Erreur updateStatut:", err);
+    logger.error("Erreur updateStatut:", err);
     return res.status(500).json({ error: "Erreur serveur" });
   }
 };
@@ -233,7 +234,7 @@ export const deleteDemande = async (req, res) => {
       message: "Demande de retrait supprimée avec succès",
     });
   } catch (err) {
-    console.error("Erreur suppression demande:", err);
+    logger.error("Erreur suppression demande:", err);
     return res.status(500).json({ error: "Erreur serveur" });
   }
 };
@@ -250,7 +251,7 @@ export const getTransactions = async (req, res) => {
 
     res.json({ transactions });
   } catch (err) {
-    console.error("Erreur getTransactions:", err);
+    logger.error("Erreur getTransactions:", err);
     res.status(500).json({ error: "Erreur serveur" });
   }
 };

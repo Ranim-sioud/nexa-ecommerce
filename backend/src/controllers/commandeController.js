@@ -1,3 +1,4 @@
+import logger from '../config/logger.js';
 import { Commande, SousCommande, LigneCommande, Client, Produit, Variation, User, MesProduit, Media, Categorie, Tracking, Vendeur, Fournisseur, Transaction } from "../models/index.js";
 import { Op } from "sequelize";
 import { createStockNotification } from "./notificationsController.js";
@@ -206,10 +207,10 @@ export const creerCommande = async (req, res) => {
         by: item.quantite,
         where: { id: item.id_produit }
       });
-      console.log('item.id_variation', item.id_variation)
+      logger.info('item.id_variation', item.id_variation)
       // Décrémenter le stock de la variation si elle existe
       if (item.id_variation) {
-        console.log('item.id_variation', item.id_variation)
+        logger.info('item.id_variation', item.id_variation)
         await Variation.decrement('stock', {
           by: item.quantite,
           where: { id: item.id_variation }
@@ -250,7 +251,7 @@ export const creerCommande = async (req, res) => {
     return res.status(201).json(commandeComplete);
     
   } catch (error) {
-    console.error("Erreur création commande:", error);
+    logger.error("Erreur création commande:", error);
     return res.status(500).json({ message: "Erreur serveur", error: error.message });
   }
 };
@@ -333,7 +334,7 @@ export const modifierCommande = async (req, res) => {
       commande: commandeMaj,
     });
   } catch (error) {
-    console.error("Erreur modification commande:", error);
+    logger.error("Erreur modification commande:", error);
     res.status(500).json({ message: "Erreur serveur", error: error.message });
   }
 };
@@ -367,7 +368,7 @@ export const getFraisCommande = async (req, res) => {
       frais_livraison,
     });
   } catch (error) {
-    console.error("Erreur calcul frais commande:", error);
+    logger.error("Erreur calcul frais commande:", error);
     return res.status(500).json({ message: "Erreur serveur" });
   }
 };
@@ -388,7 +389,7 @@ export const listerCommandesVendeur = async (req, res) => {
     const id_vendeur = req.user.id;
     let where = { id_vendeur };
 
-    console.log("📋 Paramètres reçus:", {
+    logger.info("📋 Paramètres reçus:", {
       page, limit, search, statut, tracking, produit, 
       dateCreationStart, dateCreationEnd
     });
@@ -461,7 +462,7 @@ export const listerCommandesVendeur = async (req, res) => {
       order: [["cree_le", "DESC"]],
     });
 
-    console.log(`📊 Commandes récupérées (avant filtrage): ${allCommandes.length}`);
+    logger.info(`📊 Commandes récupérées (avant filtrage): ${allCommandes.length}`);
 
     // 🔹 FILTRAGE MANUEL POUR LES FILTRES COMPLEXES
     let filteredCommandes = allCommandes;
@@ -514,7 +515,7 @@ export const listerCommandesVendeur = async (req, res) => {
     // Récupération des commandes pour la page courante
     const commandesPaginated = filteredCommandes.slice(startIndex, endIndex);
 
-    console.log(`✅ Commandes après filtrage: ${totalCount}, page: ${adjustedPage}/${totalPages}, affichées: ${commandesPaginated.length}`);
+    logger.info(`✅ Commandes après filtrage: ${totalCount}, page: ${adjustedPage}/${totalPages}, affichées: ${commandesPaginated.length}`);
 
     res.json({
       commandes: commandesPaginated,
@@ -525,7 +526,7 @@ export const listerCommandesVendeur = async (req, res) => {
       hasPrevPage: adjustedPage > 1,
     });
   } catch (error) {
-    console.error("❌ Erreur liste commandes:", error);
+    logger.error("❌ Erreur liste commandes:", error);
     res.status(500).json({
       message: "Erreur serveur",
       error: error.message,
@@ -575,10 +576,10 @@ export const obtenirDetailsCommande = async (req, res) => {
     if (!commande) {
       return res.status(404).json({ message: "Commande non trouvée" });
     }
-    console.log("Commande ::", commande)
+    logger.info("Commande ::", commande)
     res.json(commande);
   } catch (error) { 
-    console.error("Erreur détails commande:", error);
+    logger.error("Erreur détails commande:", error);
     res.status(500).json({ message: "Erreur serveur", error: error.message });
   }
 };
@@ -644,7 +645,7 @@ export const listerCommandesFournisseur = async (req, res) => {
     return res.status(200).json(sousCommandesWithFrais);
 
   } catch (error) {
-    console.error("Erreur récupération commandes fournisseur :", error);
+    logger.error("Erreur récupération commandes fournisseur :", error);
     return res.status(500).json({ message: "Erreur serveur", error: error.message });
   }
 };
@@ -699,7 +700,7 @@ export const obtenirDetailsCommandeFournisseur = async (req, res) => {
     res.json(sousCommande);
 
   } catch (error) {
-    console.error("Erreur détails commande fournisseur:", error);
+    logger.error("Erreur détails commande fournisseur:", error);
     res.status(500).json({ message: "Erreur serveur", error: error.message });
   }
 };
@@ -822,7 +823,7 @@ export const mettreAJourTracking = async (req, res) => {
     });
 
   } catch (error) {
-    console.error("Erreur mise à jour tracking :", error);
+    logger.error("Erreur mise à jour tracking :", error);
     res.status(500).json({ message: "Erreur serveur", error: error.message });
   }
 };
@@ -830,7 +831,7 @@ export const mettreAJourTracking = async (req, res) => {
 // Fonction pour réintégrer le stock lorsque le colis est retourné
 const reintegrerStockPourRetour = async (sousCommande) => {
   try {
-    console.log(`🔄 Réintégration du stock pour le retour de la sous-commande ${sousCommande.code}`);
+    logger.info(`🔄 Réintégration du stock pour le retour de la sous-commande ${sousCommande.code}`);
     
     for (const ligne of sousCommande.lignes) {
       const produit = ligne.produit;
@@ -845,7 +846,7 @@ const reintegrerStockPourRetour = async (sousCommande) => {
         });
         
         const produitApres = await Produit.findByPk(ligne.id_produit);
-        console.log(`✅ Stock produit "${produit.nom}" réintégré: +${quantite} unités. Nouveau stock: ${produitApres.stock}`);
+        logger.info(`✅ Stock produit "${produit.nom}" réintégré: +${quantite} unités. Nouveau stock: ${produitApres.stock}`);
       }
       
       // 🔄 Incrémenter le stock de la variation si elle existe
@@ -856,14 +857,14 @@ const reintegrerStockPourRetour = async (sousCommande) => {
         });
         
         const variationApres = await Variation.findByPk(ligne.id_variation);
-        console.log(`✅ Stock variation "${variation.couleur || ''}/${variation.taille || ''}" réintégré: +${quantite} unités. Nouveau stock: ${variationApres.stock}`);
+        logger.info(`✅ Stock variation "${variation.couleur || ''}/${variation.taille || ''}" réintégré: +${quantite} unités. Nouveau stock: ${variationApres.stock}`);
       }
     }
     
-    console.log(`🎉 Stock réintégré avec succès pour la sous-commande ${sousCommande.code}`);
+    logger.info(`🎉 Stock réintégré avec succès pour la sous-commande ${sousCommande.code}`);
     
   } catch (error) {
-    console.error("❌ Erreur lors de la réintégration du stock pour retour:", error);
+    logger.error("❌ Erreur lors de la réintégration du stock pour retour:", error);
     throw error;
   }
 };
@@ -876,7 +877,7 @@ const debiterVendeurPourRetour = async (sousCommande) => {
     });
     
     if (!vendeur) {
-      console.error(`Vendeur non trouvé pour l'utilisateur ${sousCommande.commande.id_vendeur}`);
+      logger.error(`Vendeur non trouvé pour l'utilisateur ${sousCommande.commande.id_vendeur}`);
       return;
     }
 
@@ -886,7 +887,7 @@ const debiterVendeurPourRetour = async (sousCommande) => {
     const soldeActuel = parseFloat(vendeur.solde_portefeuille || 0);
     
     if (soldeActuel < montantDebit) {
-      console.warn(`Solde insuffisant pour le vendeur ${vendeur.id_user}: ${soldeActuel} TND < ${montantDebit} TND`);
+      logger.warn(`Solde insuffisant pour le vendeur ${vendeur.id_user}: ${soldeActuel} TND < ${montantDebit} TND`);
       // Vous pouvez décider de débiter quand même (solde négatif) ou de ne pas débiter
       // Pour cet exemple, on débite même si solde insuffisant
     }
@@ -913,10 +914,10 @@ const debiterVendeurPourRetour = async (sousCommande) => {
 
     await notifierVendeurRetour(sousCommande.commande.id_vendeur, montantDebit, sousCommande.code);
 
-    console.log(`✅ Vendeur ${sousCommande.commande.id_vendeur} débité de ${montantDebit} TND pour colis retourné. Nouveau solde: ${nouveauSolde} TND`);
+    logger.info(`✅ Vendeur ${sousCommande.commande.id_vendeur} débité de ${montantDebit} TND pour colis retourné. Nouveau solde: ${nouveauSolde} TND`);
 
   } catch (error) {
-    console.error("❌ Erreur lors du débit du vendeur pour colis retourné:", error);
+    logger.error("❌ Erreur lors du débit du vendeur pour colis retourné:", error);
     throw error;
   }
 };
@@ -935,9 +936,9 @@ const notifierVendeurRetour = async (vendeurId, montant, sousCommandeCode) => {
       lu: false
     });
     
-    console.log(`📩 Notification envoyée au vendeur ${vendeurId} pour débit retour`);
+    logger.info(`📩 Notification envoyée au vendeur ${vendeurId} pour débit retour`);
   } catch (error) {
-    console.error("❌ Erreur lors de la création de la notification:", error);
+    logger.error("❌ Erreur lors de la création de la notification:", error);
     // Ne pas bloquer le processus si la notification échoue
   }
 };
@@ -1005,10 +1006,10 @@ const mettreAJourSoldesAvecFrais = async (sousCommande) => {
       });
     }
 
-    console.log(`✅ Gains enregistrés : vendeur +${gainNetVendeur} TND, fournisseur +${gainNetFournisseur} TND`);
+    logger.info(`✅ Gains enregistrés : vendeur +${gainNetVendeur} TND, fournisseur +${gainNetFournisseur} TND`);
 
   } catch (error) {
-    console.error("❌ Erreur mise à jour soldes avec frais:", error);
+    logger.error("❌ Erreur mise à jour soldes avec frais:", error);
     throw error;
   }
 };
@@ -1034,9 +1035,9 @@ export async function majStatutCommande(id_commande) {
 // Obtenir les produits du vendeur
 export const obtenirProduitsVendeur = async (req, res) => {
   try {
-    console.log("=== DEBUT obtenirProduitsVendeur ===");
-    console.log("User ID:", req.user?.id);
-    console.log("Query params:", req.query);
+    logger.info("=== DEBUT obtenirProduitsVendeur ===");
+    logger.info("User ID:", req.user?.id);
+    logger.info("Query params:", req.query);
     
     const id_vendeur = req.user?.id;
     
@@ -1058,7 +1059,7 @@ export const obtenirProduitsVendeur = async (req, res) => {
       ];
     }
 
-    console.log("Produit where clause:", produitWhere);
+    logger.info("Produit where clause:", produitWhere);
 
     // 1. D'abord, trouver tous les MesProduit du vendeur
     const mesProduits = await MesProduit.findAll({
@@ -1132,8 +1133,8 @@ export const obtenirProduitsVendeur = async (req, res) => {
       transaction: req.transaction || undefined
     });
 
-    console.log("Produits trouvés:", produits.length);
-    console.log("Total produits:", totalProduits);
+    logger.info("Produits trouvés:", produits.length);
+    logger.info("Total produits:", totalProduits);
 
     // Formater la réponse
     const produitsFormates = produits.map(produit => {
@@ -1164,7 +1165,7 @@ export const obtenirProduitsVendeur = async (req, res) => {
       };
     });
 
-    console.log("Produits formatés:", produitsFormates.length);
+    logger.info("Produits formatés:", produitsFormates.length);
 
     res.json({ 
       success: true,
@@ -1174,10 +1175,10 @@ export const obtenirProduitsVendeur = async (req, res) => {
       totalPages: Math.ceil(totalProduits / limit) 
     });
 
-    console.log("=== FIN obtenirProduitsVendeur ===");
+    logger.info("=== FIN obtenirProduitsVendeur ===");
 
   } catch (error) {
-    console.error("❌ Erreur produits vendeur:", error);
+    logger.error("❌ Erreur produits vendeur:", error);
     res.status(500).json({ 
       success: false,
       message: "Erreur lors du chargement des produits", 
@@ -1248,7 +1249,7 @@ export const supprimerCommandes = async (req, res) => {
     });
 
   } catch (error) {
-    console.error("Erreur suppression commandes:", error);
+    logger.error("Erreur suppression commandes:", error);
     return res.status(500).json({
       message: "Erreur serveur lors de la suppression des commandes",
       error: error.message,
@@ -1270,7 +1271,7 @@ export const getTransactions = async (req, res) => {
 
     res.json(transactions);
   } catch (error) {
-    console.error("Erreur lors de la récupération des transactions:", error);
+    logger.error("Erreur lors de la récupération des transactions:", error);
     res.status(500).json({ message: "Erreur serveur" });
   }
 };

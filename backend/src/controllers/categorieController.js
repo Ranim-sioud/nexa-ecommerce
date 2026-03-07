@@ -1,3 +1,4 @@
+import logger from '../config/logger.js';
 import Categorie from "../models/Categorie.js";
 
 export async function getCategories(req, res) {
@@ -5,7 +6,7 @@ export async function getCategories(req, res) {
     const categories = await Categorie.findAll();
     res.json(categories);
   } catch (err) {
-    console.error(err);
+    logger.error(err);
     res.status(500).json({ message: "Erreur serveur" });
   }
 }
@@ -16,7 +17,7 @@ export async function createCategorie(req, res) {
     const categorie = await Categorie.create({ nom, description });
     res.status(201).json(categorie);
   } catch (err) {
-    console.error(err);
+    logger.error(err);
     res.status(500).json({ message: "Erreur serveur" });
   }
 }

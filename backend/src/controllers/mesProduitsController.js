@@ -1,4 +1,5 @@
 // controllers/mesProduitsController.js
+import logger from '../config/logger.js';
 import MesProduit from "../models/MesProduit.js";
 import Produit from "../models/Produit.js";
 import Media from "../models/Media.js";
@@ -69,11 +70,11 @@ export const getMesProduits = async (req, res) => {
       return mesProduitData;
     });
 
-    console.log('Mes produits chargés:', result.length);
+    logger.info('Mes produits chargés:', result.length);
     res.json(result);
 
   } catch (err) {
-    console.error("Erreur getMesProduits:", err);
+    logger.error("Erreur getMesProduits:", err);
     res.status(500).json({ error: err.message });
   }
 };

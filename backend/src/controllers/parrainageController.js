@@ -1,3 +1,4 @@
+import logger from '../config/logger.js';
 import Parrainage from "../models/Parrainage.js";
 import User from "../models/User.js";
 import Vendeur from "../models/Vendeur.js";
@@ -57,7 +58,7 @@ export const getAllParrainages = async (req, res) => {
 
     res.json(parrainagesAvecBonus);
   } catch (err) {
-    console.error("Erreur getAllParrainages:", err);
+    logger.error("Erreur getAllParrainages:", err);
     res.status(500).json({ message: "Erreur serveur" });
   }
 };
@@ -101,7 +102,7 @@ export const getBonusParVendeur = async (req, res) => {
 
     res.status(200).json(result);
   } catch (error) {
-    console.error("Erreur dans getBonusParVendeur:", error);
+    logger.error("Erreur dans getBonusParVendeur:", error);
     res.status(500).json({ message: "Erreur lors du calcul des bonus" });
   }
 };
@@ -112,23 +113,23 @@ function getDefaultPourcentage(niveau) {
 }
 export const getParrainagesByVendeur = async (req, res) => {
   try {
-    console.log('=== DEBUT getParrainagesByVendeur ===');
+    logger.info('=== DEBUT getParrainagesByVendeur ===');
     const idVendeur = parseInt(req.params.id, 10);
-    console.log('ID vendeur reçu:', idVendeur);
+    logger.info('ID vendeur reçu:', idVendeur);
     
     if (isNaN(idVendeur)) {
-      console.log('ID invalide');
+      logger.info('ID invalide');
       return res.status(400).json({ message: "ID invalide" });
     }
 
     // 🔹 Vérifier si l'utilisateur existe
     const userExists = await User.findByPk(idVendeur);
     if (!userExists) {
-      console.log('Utilisateur non trouvé:', idVendeur);
+      logger.info('Utilisateur non trouvé:', idVendeur);
       return res.status(404).json({ message: "Utilisateur non trouvé" });
     }
 
-    console.log('Recherche des parrainages pour vendeur:', idVendeur);
+    logger.info('Recherche des parrainages pour vendeur:', idVendeur);
 
     // 🔹 Rechercher tous les parrainages où ce vendeur est parrain
     const parrainages = await Parrainage.findAll({
@@ -143,7 +144,7 @@ export const getParrainagesByVendeur = async (req, res) => {
       order: [["cree_le", "DESC"]],
     });
 
-    console.log('Nombre de parrainages trouvés:', parrainages.length);
+    logger.info('Nombre de parrainages trouvés:', parrainages.length);
 
     // 🔹 Récupérer TOUTES les transactions de bonus pour ce vendeur
     const transactions = await Transaction.findAll({
@@ -154,7 +155,7 @@ export const getParrainagesByVendeur = async (req, res) => {
       order: [["cree_le", "DESC"]],
     });
 
-    console.log(`Transactions bonus trouvées: ${transactions.length}`);
+    logger.info(`Transactions bonus trouvées: ${transactions.length}`);
     
     // 🔹 Créer un map pour retrouver rapidement le bonus et le pourcentage par filleul
     const infoParFilleul = new Map();
@@ -176,17 +177,17 @@ export const getParrainagesByVendeur = async (req, res) => {
             pourcentage: pourcentage || getDefaultPourcentage(niveau), // Utiliser le pourcentage stocké ou calculé
             transactionId: transaction.id
           });
-          console.log(`Map: filleul ${fromId} -> bonus ${transaction.montant}, niveau ${niveau}, pourcentage ${pourcentage}%`);
+          logger.info(`Map: filleul ${fromId} -> bonus ${transaction.montant}, niveau ${niveau}, pourcentage ${pourcentage}%`);
         }
       } catch (parseError) {
-        console.log(`Erreur parsing meta transaction ${transaction.id}:`, parseError.message);
+        logger.info(`Erreur parsing meta transaction ${transaction.id}:`, parseError.message);
       }
     });
 
     // 🔹 Traiter chaque parrainage
     const resultats = await Promise.all(
       parrainages.map(async (p) => {
-        console.log(`Traitement parrainage ID ${p.id}, filleul: ${p.id_parrained}`);
+        logger.info(`Traitement parrainage ID ${p.id}, filleul: ${p.id_parrained}`);
         
         // Trouver le parrain DIRECT (niveau 1) de ce filleul
         const parrainDirectRelation = await Parrainage.findOne({
@@ -208,7 +209,7 @@ export const getParrainagesByVendeur = async (req, res) => {
         const bonus = info ? info.montant : 0;
         const pourcentage = info ? info.pourcentage : getDefaultPourcentage(p.niveau);
         
-        console.log(`Bonus pour filleul ${p.id_parrained}: ${bonus}, pourcentage: ${pourcentage}%`);
+        logger.info(`Bonus pour filleul ${p.id_parrained}: ${bonus}, pourcentage: ${pourcentage}%`);
 
         const result = {
           id: p.id,
@@ -228,17 +229,17 @@ export const getParrainagesByVendeur = async (req, res) => {
           cree_le: p.cree_le || new Date(),
         };
 
-        console.log(`Parrainage traité: ${JSON.stringify(result)}`);
+        logger.info(`Parrainage traité: ${JSON.stringify(result)}`);
         return result;
       })
     );
 
-    console.log('=== FIN getParrainagesByVendeur ===');
+    logger.info('=== FIN getParrainagesByVendeur ===');
     res.json(resultats.filter(r => r.parrained !== null));
     
   } catch (err) {
-    console.error("❌ ERREUR CRITIQUE getParrainagesByVendeur:", err);
-    console.error("Stack trace:", err.stack);
+    logger.error("❌ ERREUR CRITIQUE getParrainagesByVendeur:", err);
+    logger.error("Stack trace:", err.stack);
     res.status(500).json({ 
       message: "Erreur serveur", 
       error: err.message,

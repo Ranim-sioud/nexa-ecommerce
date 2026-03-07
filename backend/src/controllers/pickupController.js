@@ -1,3 +1,4 @@
+import logger from '../config/logger.js';
 import SousCommande from "../models/SousCommande.js";
 import Commande from "../models/Commande.js";
 import Client from "../models/Client.js";
@@ -29,7 +30,7 @@ export const createPickup = async (req, res) => {
 
     return res.status(201).json({ message: "Pickup créé", pickup: newPickup });
   } catch (err) {
-    console.error("createPickup error:", err);
+    logger.error("createPickup error:", err);
     return res.status(500).json({ message: "Erreur création pickup", error: err.message });
   }
 };
@@ -88,7 +89,7 @@ export const listPickups = async (req, res) => {
       pickups: pickupsWithSousCommandes
     });
   } catch (err) {
-    console.error("listPickups error:", err);
+    logger.error("listPickups error:", err);
     return res.status(500).json({ message: "Erreur list pickups", error: err.message });
   }
 };
@@ -150,7 +151,7 @@ export const getPickupDetail = async (req, res) => {
 
     return res.status(200).json({ pickup, sousCommandes: sousCommandesWithFrais });
   } catch (err) {
-    console.error("getPickupDetail error:", err);
+    logger.error("getPickupDetail error:", err);
     return res.status(500).json({ message: "Erreur get pickup", error: err.message });
   }
 };
@@ -197,7 +198,7 @@ export const listEnAttenteEnlevement = async (req, res) => {
 
     return res.json(sousCommandes);
   } catch (err) {
-    console.error(err);
+    logger.error(err);
     return res.status(500).json({ message: "Erreur serveur", error: err.message });
   }
 };

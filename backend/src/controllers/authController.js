@@ -1,3 +1,4 @@
+import logger from '../config/logger.js';
 import bcrypt from 'bcrypt';
 import argon2 from 'argon2';
 import jwt from 'jsonwebtoken';
@@ -57,7 +58,7 @@ export async function activateUser(req, res) {
 
     res.json({ message: 'Compte activé ✅' });
   } catch (err) {
-    console.error(err);
+    logger.error(err);
     res.status(400).json({ message: 'Lien invalide ou expiré' });
   }
 }
@@ -72,7 +73,7 @@ export async function activateUser(req, res) {
   try {
     
     const { nom, email, telephone, mot_de_passe, confirmer_mot_de_passe, gouvernorat, ville, adresse, pack_cle, code_parrainage, facebook_url, instagram_url } = req.body;
-    console.log(req.body)
+    logger.info('registerVendeur attempt', { email, pack_cle, ip: req.ip });
     if (!nom || !email || !mot_de_passe || !confirmer_mot_de_passe || !gouvernorat || !ville || !adresse || !pack_cle)
       return res.status(400).json({ message: 'Champs requis manquants' });
 
@@ -150,7 +151,7 @@ export async function activateUser(req, res) {
     await t.commit();
 
     // Envoyer mail de validation (non-blocking: log error but don't fail the request)
-    sendActivationEmail(user, token).catch(err => console.error('Mail activation failed:', err.message));
+    sendActivationEmail(user, token).catch(err => logger.error('Mail activation failed:', err.message));
 
     res.status(201).json({
       message: 'Vendeur créé. Veuillez activer votre compte via le mail envoyé.',
@@ -161,7 +162,7 @@ export async function activateUser(req, res) {
 
   } catch (err) {
     await t.rollback();
-    console.error(err);
+    logger.error(err);
     res.status(500).json({ message: 'Erreur serveur' });
   }
 }
@@ -217,7 +218,7 @@ export async function registerFournisseur(req, res) {
     });
 
   } catch (err) {
-    console.error(err);
+    logger.error(err);
     res.status(500).json({ message: 'Erreur serveur' });
   }
 }
@@ -328,7 +329,7 @@ export async function refresh(req, res) {
 
     return res.json({ message: "Token renouvelé" });
   } catch (err) {
-    console.error("Refresh error:", err);
+    logger.error("Refresh error:", err);
     return res.status(500).json({ message: "Erreur refresh token" });
   }
 }
@@ -358,7 +359,7 @@ export async function logout(req, res) {
     
     return res.json({ message: "Déconnecté avec succès" });
   } catch (err) {
-    console.error("Erreur logout:", err);
+    logger.error("Erreur logout:", err);
     return res.status(500).json({ message: "Erreur lors de la déconnexion" });
   }
 }
@@ -418,7 +419,7 @@ export async function forgotPassword(req, res) {
     res.json({ message: "Si cet email existe, un lien de réinitialisation a été envoyé" });
 
   } catch (err) {
-    console.error("Erreur forgotPassword:", err);
+    logger.error("Erreur forgotPassword:", err);
     res.status(500).json({ message: "Erreur lors de l'envoi de l'email" });
   }
 }
@@ -465,7 +466,7 @@ export async function verifyResetToken(req, res) {
     });
 
   } catch (err) {
-    console.error("Erreur verifyResetToken:", err);
+    logger.error("Erreur verifyResetToken:", err);
     res.status(500).json({ message: "Erreur serveur" });
   }
 }
@@ -567,7 +568,7 @@ export async function resetPassword(req, res) {
 
   } catch (err) {
     await t.rollback();
-    console.error("Erreur resetPassword:", err);
+    logger.error("Erreur resetPassword:", err);
     res.status(500).json({ message: "Erreur lors de la réinitialisation" });
   }
 }

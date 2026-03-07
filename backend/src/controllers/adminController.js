@@ -1,3 +1,4 @@
+import logger from '../config/logger.js';
 import { Op } from "sequelize";
 import { User, Vendeur, Pack, Fournisseur, Tickets, TicketsType, TicketsMessage, Permission, Task, Produit } from "../models/index.js";
 
@@ -43,7 +44,7 @@ export async function listUsers(req, res) {
     });
     res.json(users);
   } catch (err) {
-    console.error(err);
+    logger.error(err);
     res.status(500).json({ message: "Erreur serveur" });
   }
 }
@@ -88,7 +89,7 @@ export async function listUsers(req, res) {
     });
 
   } catch (error) {
-    console.error('Erreur updateUserStatus:', error);
+    logger.error('Erreur updateUserStatus:', error);
     res.status(500).json({ 
       message: "Erreur serveur", 
       error: error.message 
@@ -104,7 +105,7 @@ export async function deleteUser(req, res) {
     await user.destroy();
     res.json({ message: "Utilisateur supprimé" });
   } catch (err) {
-    console.error(err);
+    logger.error(err);
     res.status(500).json({ message: "Erreur serveur" });
   }
 }
@@ -118,7 +119,7 @@ export async function getVendeurPacks(req, res) {
     const pack = await Pack.findOne({ where: { cle: vendeur.pack_cle } });
     res.json({ vendeur, pack });
   } catch (err) {
-    console.error(err);
+    logger.error(err);
     res.status(500).json({ message: "Erreur serveur" });
   }
 }
@@ -130,7 +131,7 @@ export async function createType(req, res) {
     const type = await TicketsType.create({ name, description, specialist_user_id });
     res.json({ type });
   } catch (err) {
-    console.error(err);
+    logger.error(err);
     res.status(500).json({ message: "Erreur create type" });
   }
 }
@@ -145,7 +146,7 @@ export async function assignTickets(req, res) {
     await tickets.save();
     res.json({ tickets });
   } catch (err) {
-    console.error(err);
+    logger.error(err);
     res.status(500).json({ message: "Erreur assignation" });
   }
 }
@@ -159,7 +160,7 @@ export async function closeTickets(req, res) {
     await tickets.save();
     res.json({ tickets });
   } catch (err) {
-    console.error(err);
+    logger.error(err);
     res.status(500).json({ message: "Erreur fermer tickets" });
   }
 }
@@ -182,7 +183,7 @@ export async function repondreTicket(req, res) {
 
     res.status(201).json({ message: "Réponse envoyée", data: newMessage });
   } catch (err) {
-    console.error(err);
+    logger.error(err);
     res.status(500).json({ message: "Erreur envoi réponse", error: err.message });
   }
 }
@@ -236,7 +237,7 @@ export const assignPermission = async (req, res) => {
     });
 
   } catch (error) {
-    console.error('Erreur assignPermission:', error);
+    logger.error('Erreur assignPermission:', error);
     res.status(500).json({ message: 'Erreur serveur' });
   }
 };
@@ -262,7 +263,7 @@ export const getPermissions = async (req, res) => {
 
     res.json(permissions);
   } catch (error) {
-    console.error('Erreur getPermissions:', error);
+    logger.error('Erreur getPermissions:', error);
     res.status(500).json({ message: 'Erreur serveur' });
   }
 };
@@ -285,7 +286,7 @@ export const getSpecialistPermissions = async (req, res) => {
 
     res.json(permissions);
   } catch (error) {
-    console.error('Erreur getSpecialistPermissions:', error);
+    logger.error('Erreur getSpecialistPermissions:', error);
     res.status(500).json({ message: 'Erreur serveur' });
   }
 };
@@ -304,7 +305,7 @@ export const removePermission = async (req, res) => {
     res.json({ message: 'Permission supprimée avec succès' });
 
   } catch (error) {
-    console.error('Erreur removePermission:', error);
+    logger.error('Erreur removePermission:', error);
     res.status(500).json({ message: 'Erreur serveur' });
   }
 };
@@ -368,7 +369,7 @@ export const assignTask = async (req, res) => {
     });
 
   } catch (error) {
-    console.error('Erreur assignTask:', error);
+    logger.error('Erreur assignTask:', error);
     res.status(500).json({ message: 'Erreur serveur' });
   }
 };
@@ -401,7 +402,7 @@ export const getTasks = async (req, res) => {
 
     res.json(tasks);
   } catch (error) {
-    console.error('Erreur getTasks:', error);
+    logger.error('Erreur getTasks:', error);
     res.status(500).json({ message: 'Erreur serveur' });
   }
 };
@@ -421,7 +422,7 @@ export const updateTaskStatus = async (req, res) => {
     res.json({ message: 'Statut mis à jour', task });
 
   } catch (error) {
-    console.error('Erreur updateTaskStatus:', error);
+    logger.error('Erreur updateTaskStatus:', error);
     res.status(500).json({ message: 'Erreur serveur' });
   }
 };
@@ -454,7 +455,7 @@ export const getSpecialists = async (req, res) => {
 
     res.json(specialists);
   } catch (error) {
-    console.error('Erreur getSpecialists:', error);
+    logger.error('Erreur getSpecialists:', error);
     res.status(500).json({ message: 'Erreur serveur' });
   }
 };
@@ -525,7 +526,7 @@ export const getAdminDashboard = async (req, res) => {
     });
     
   } catch (error) {
-    console.error('Erreur getAdminDashboard:', error);
+    logger.error('Erreur getAdminDashboard:', error);
     res.status(500).json({ message: 'Erreur serveur' });
   }
 }
@@ -568,7 +569,7 @@ export async function traiterDemandePack(req, res) {
     res.json({ message: `Demande ${decision} avec succès ✅` });
 
   } catch (error) {
-    console.error(error);
+    logger.error(error);
     res.status(500).json({ message: "Erreur serveur" });
   }
 }

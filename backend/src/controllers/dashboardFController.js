@@ -1,3 +1,4 @@
+import logger from '../config/logger.js';
 import { Op, fn, col, literal } from "sequelize";
 import {
   Commande,
@@ -55,7 +56,7 @@ export const getProfit = async (fournisseurId, dateFilter = null) => {
     }
     return Number(profit.toFixed(2));
   } catch (error) {
-    console.error("Erreur dans getProfit:", error);
+    logger.error("Erreur dans getProfit:", error);
     return 0;
   }
 };
@@ -89,10 +90,10 @@ export const getCA = async (fournisseurId, dateFilter = null) => {
 
     let total = 0;
     for (const l of lignes) total += l.prix_gros * l.quantite;
-    console.log('total::', total)
+    logger.info('total::', total)
     return Number(total.toFixed(2));
   } catch (error) {
-    console.error("Erreur dans getCA:", error);
+    logger.error("Erreur dans getCA:", error);
     return 0;
   }
 };
@@ -129,10 +130,10 @@ export const getCAEnCours = async (fournisseurId, dateFilter = null) => {
     for (const ligne of lignes) {
       caTotal += ligne.prix_gros * ligne.quantite;
     }
-    console.log("caTotal", caTotal)
+    logger.info("caTotal", caTotal)
     return Number(caTotal.toFixed(2));
   } catch (error) {
-    console.error("Erreur dans getCAEnCours:", error);
+    logger.error("Erreur dans getCAEnCours:", error);
     return 0;
   }
 };
@@ -176,7 +177,7 @@ export const getChiffreAffairePotentiel = async (fournisseurId, dateFilter = nul
 
     return Number(chiffreAffaire.toFixed(2));
   } catch (error) {
-    console.error("Erreur dans getChiffreAffairePotentiel:", error);
+    logger.error("Erreur dans getChiffreAffairePotentiel:", error);
     return 0;
   }
 };
@@ -193,7 +194,7 @@ export const getPenalitesRetour = async (fournisseurId, dateFilter = null, penal
     });
     return nb * penalite;
   } catch (error) {
-    console.error("Erreur dans getPenalitesRetour:", error);
+    logger.error("Erreur dans getPenalitesRetour:", error);
     return 0;
   }
 };
@@ -260,7 +261,7 @@ const getMainStats = async (fournisseurId, dateFilter = null) => {
       tauxRetour,
     };
   } catch (error) {
-    console.error("Erreur dans getMainStats:", error);
+    logger.error("Erreur dans getMainStats:", error);
     return {
       totalCommandes: 0,
       livrees: 0,
@@ -365,7 +366,7 @@ const getMonthlyData = async (fournisseurId, dateFilter = null) => {
 
     return result;
   } catch (error) {
-    console.error("Erreur dans getMonthlyData:", error);
+    logger.error("Erreur dans getMonthlyData:", error);
     // Retourner des données vides en cas d'erreur
     const now = new Date();
     const result = [];
@@ -461,7 +462,7 @@ const getDailyData = async (fournisseurId, dateFilter = null) => {
         commandes: val.commandes,
       }));
   } catch (error) {
-    console.error("Erreur dans getDailyData:", error);
+    logger.error("Erreur dans getDailyData:", error);
     // Retourner des données vides en cas d'erreur
     const now = new Date();
     const dailyMap = {};
@@ -552,7 +553,7 @@ const getTopProducts = async (fournisseurId, dateFilter = null) => {
 
     return result;
   } catch (error) {
-    console.error("Erreur dans getTopProducts:", error);
+    logger.error("Erreur dans getTopProducts:", error);
     return [];
   }
 };
@@ -588,7 +589,7 @@ const getCommandesParSource = async (fournisseurId, dateFilter = null) => {
       count: parseInt(row.count, 10) || 0 
     }));
   } catch (error) {
-    console.error("Erreur dans getCommandesParSource:", error);
+    logger.error("Erreur dans getCommandesParSource:", error);
     return [];
   }
 };
@@ -600,7 +601,7 @@ const getPickupsCount = async (fournisseurId, dateFilter = null) => {
     const count = await Pickup.count({ where: whereP });
     return count;
   } catch (error) {
-    console.error("Erreur dans getPickupsCount:", error);
+    logger.error("Erreur dans getPickupsCount:", error);
     return 0;
   }
 };
@@ -676,7 +677,7 @@ export const getSupplierDashboard = async (req, res) => {
       },
     });
   } catch (error) {
-    console.error("Erreur getSupplierDashboard:", error);
+    logger.error("Erreur getSupplierDashboard:", error);
     return res.status(500).json({ 
       message: "Erreur serveur", 
       error: error.message 

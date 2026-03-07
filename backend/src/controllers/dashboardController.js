@@ -1,3 +1,4 @@
+import logger from '../config/logger.js';
 import { Op, fn, col, literal } from "sequelize";
 import {
   Commande,
@@ -51,7 +52,7 @@ export const getProfit = async (userId, dateFilter = null) => {
 
     return Number(profit.toFixed(2));
   } catch (error) {
-    console.error("Erreur dans getProfit:", error);
+    logger.error("Erreur dans getProfit:", error);
     return 0;
   }
 };
@@ -90,7 +91,7 @@ export const getCA = async (userId, dateFilter = null) => {
     }
     return Number(totalCA.toFixed(2));
   } catch (error) {
-    console.error("Erreur dans getCA:", error);
+    logger.error("Erreur dans getCA:", error);
     return 0;
   }
 };
@@ -131,7 +132,7 @@ export const getProfitEnCours = async (userId, dateFilter = null) => {
     }
     return Number(profit.toFixed(2));
   } catch (error) {
-    console.error("Erreur dans getProfitEnCours:", error);
+    logger.error("Erreur dans getProfitEnCours:", error);
     return 0;
   }
 };
@@ -161,7 +162,7 @@ export const getPenalitesRetour = async (userId, dateFilter = null) => {
 
     return retournees * penalite;
   } catch (error) {
-    console.error("Erreur dans getPenalitesRetour:", error);
+    logger.error("Erreur dans getPenalitesRetour:", error);
     return 0;
   }
 };
@@ -243,7 +244,7 @@ const getMainStats = async (userId, dateFilter = null) => {
       tauxRetour,
     };
   } catch (error) {
-    console.error("Erreur dans getMainStats:", error);
+    logger.error("Erreur dans getMainStats:", error);
     return {
       totalCommandes: 0,
       livrees: 0,
@@ -389,7 +390,7 @@ const getTopProducts = async (userId, dateFilter = null) => {
     }
 
     // APPROCHE SIMPLIFIÉE - Deux requêtes séparées
-    console.log("IDs produits favoris:", idsProduitsFavoris);
+    logger.info("IDs produits favoris:", idsProduitsFavoris);
 
     // 1. Récupérer les ventes par produit
     const whereCondition = {
@@ -429,7 +430,7 @@ const getTopProducts = async (userId, dateFilter = null) => {
       raw: true // Important pour éviter les problèmes de sérialisation
     });
 
-    console.log("Ventes produits trouvées:", ventesProduits.length);
+    logger.info("Ventes produits trouvées:", ventesProduits.length);
 
     if (ventesProduits.length === 0) {
       return [];
@@ -451,14 +452,14 @@ const getTopProducts = async (userId, dateFilter = null) => {
       attributes: ["id", "nom"]
     });
 
-    console.log("Détails produits trouvés:", produitsDetails.length);
+    logger.info("Détails produits trouvés:", produitsDetails.length);
 
     // 3. Combiner les données
     const result = ventesProduits.map(vente => {
       const produitDetail = produitsDetails.find(p => p.id === vente.id_produit);
       const medias = produitDetail?.medias || [];
       
-      console.log(`Produit ${vente.id_produit}:`, {
+      logger.info(`Produit ${vente.id_produit}:`, {
         nom: produitDetail?.nom,
         ventes: vente.ventes,
         mediasCount: medias.length
@@ -475,12 +476,12 @@ const getTopProducts = async (userId, dateFilter = null) => {
     // Trier par ventes décroissantes
     result.sort((a, b) => b.ventes - a.ventes);
 
-    console.log("Résultat final:", result.length, "produits");
+    logger.info("Résultat final:", result.length, "produits");
     return result;
 
   } catch (error) {
-    console.error("Erreur détaillée dans getTopProducts:", error);
-    console.error("Stack trace:", error.stack);
+    logger.error("Erreur détaillée dans getTopProducts:", error);
+    logger.error("Stack trace:", error.stack);
     return [];
   }
 };
@@ -510,7 +511,7 @@ const getRecentOrders = async (userId, dateFilter = null) => {
       date: c.cree_le?.toISOString().slice(0, 10) || new Date().toISOString().slice(0, 10),
     }));
   } catch (error) {
-    console.error("Erreur dans getRecentOrders:", error);
+    logger.error("Erreur dans getRecentOrders:", error);
     return [];
   }
 };
@@ -541,7 +542,7 @@ const getCommandesParSource = async (userId, dateFilter = null) => {
       count: parseInt(s.get('count'), 10) || 0
     }));
   } catch (error) {
-    console.error("Erreur dans getCommandesParSource:", error);
+    logger.error("Erreur dans getCommandesParSource:", error);
     return [];
   }
 };
@@ -576,7 +577,7 @@ export const getDashboardStats = async (req, res) => {
       
       endDate.setHours(23, 59, 59, 999);
     } catch (dateError) {
-      console.error("Erreur de parsing des dates:", dateError);
+      logger.error("Erreur de parsing des dates:", dateError);
       startDate = new Date(today);
       endDate = new Date(today);
       endDate.setHours(23, 59, 59, 999);
@@ -585,7 +586,7 @@ export const getDashboardStats = async (req, res) => {
     // Créer le filtre de date
     const dateFilter = { [Op.between]: [startDate, endDate] };
 
-    console.log(`Chargement dashboard pour userId: ${userId}, période: ${startDate.toISOString()} à ${endDate.toISOString()}`);
+    logger.info(`Chargement dashboard pour userId: ${userId}, période: ${startDate.toISOString()} à ${endDate.toISOString()}`);
 
     const [
       profit, 
@@ -599,16 +600,16 @@ export const getDashboardStats = async (req, res) => {
       recentOrders, 
       commandesParSource
     ] = await Promise.all([
-      getProfit(userId, dateFilter).catch(err => { console.error("Error in getProfit:", err); return 0; }),
-      getCA(userId, dateFilter).catch(err => { console.error("Error in getCA:", err); return 0; }),
-      getProfitEnCours(userId, dateFilter).catch(err => { console.error("Error in getProfitEnCours:", err); return 0; }),
-      getPenalitesRetour(userId, dateFilter).catch(err => { console.error("Error in getPenalitesRetour:", err); return 0; }),
-      getMainStats(userId, dateFilter).catch(err => { console.error("Error in getMainStats:", err); return {}; }),
-      getMonthlyData(userId).catch(err => { console.error("Error in getMonthlyData:", err); return []; }),
-      getDailyData(userId).catch(err => { console.error("Error in getDailyData:", err); return []; }),
-      getTopProducts(userId, dateFilter).catch(err => { console.error("Error in getTopProducts:", err); return []; }),
-      getRecentOrders(userId, dateFilter).catch(err => { console.error("Error in getRecentOrders:", err); return []; }),
-      getCommandesParSource(userId, dateFilter).catch(err => { console.error("Error in getCommandesParSource:", err); return []; }),
+      getProfit(userId, dateFilter).catch(err => { logger.error("Error in getProfit:", err); return 0; }),
+      getCA(userId, dateFilter).catch(err => { logger.error("Error in getCA:", err); return 0; }),
+      getProfitEnCours(userId, dateFilter).catch(err => { logger.error("Error in getProfitEnCours:", err); return 0; }),
+      getPenalitesRetour(userId, dateFilter).catch(err => { logger.error("Error in getPenalitesRetour:", err); return 0; }),
+      getMainStats(userId, dateFilter).catch(err => { logger.error("Error in getMainStats:", err); return {}; }),
+      getMonthlyData(userId).catch(err => { logger.error("Error in getMonthlyData:", err); return []; }),
+      getDailyData(userId).catch(err => { logger.error("Error in getDailyData:", err); return []; }),
+      getTopProducts(userId, dateFilter).catch(err => { logger.error("Error in getTopProducts:", err); return []; }),
+      getRecentOrders(userId, dateFilter).catch(err => { logger.error("Error in getRecentOrders:", err); return []; }),
+      getCommandesParSource(userId, dateFilter).catch(err => { logger.error("Error in getCommandesParSource:", err); return []; }),
     ]);
 
     res.json({
@@ -630,7 +631,7 @@ export const getDashboardStats = async (req, res) => {
       }
     });
   } catch (error) {
-    console.error("Erreur getDashboardStats:", error);
+    logger.error("Erreur getDashboardStats:", error);
     res.status(500).json({ 
       message: "Erreur serveur", 
       error: error.message,

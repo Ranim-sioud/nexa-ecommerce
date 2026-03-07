@@ -50,6 +50,8 @@ services:
       CLOUDINARY_CLOUD_NAME:  ${CLOUDINARY_CLOUD_NAME:-}
       CLOUDINARY_API_KEY:     ${CLOUDINARY_API_KEY:-}
       CLOUDINARY_API_SECRET:  ${CLOUDINARY_API_SECRET:-}
+    volumes:
+      - logs:/app/logs
     depends_on:
       db:
         condition: service_healthy
@@ -64,5 +66,48 @@ services:
     ports:
       - "127.0.0.1:3000:80"   # only reachable from localhost (nginx reverse-proxy)
 
+  # ── Observability stack ──────────────────────────────────────────────────────
+
+  loki:
+    image: grafana/loki:3.0.0
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:3100:3100"
+    volumes:
+      - ./monitoring/loki-config.yml:/etc/loki/local-config.yaml:ro
+      - loki-data:/loki
+    command: -config.file=/etc/loki/local-config.yaml
+
+  promtail:
+    image: grafana/promtail:3.0.0
+    restart: unless-stopped
+    volumes:
+      - ./monitoring/promtail-config.yml:/etc/promtail/config.yml:ro
+      - logs:/var/log/nexa:ro
+    command: -config.file=/etc/promtail/config.yml
+    depends_on:
+      - loki
+
+  grafana:
+    image: grafana/grafana:11.0.0
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:3001:3000"
+    environment:
+      GF_SECURITY_ADMIN_USER:          ${GRAFANA_USER:-admin}
+      GF_SECURITY_ADMIN_PASSWORD:      ${GRAFANA_PASSWORD:-nexa-grafana-2026}
+      GF_SERVER_ROOT_URL:              https://nexa-tn.com/grafana/
+      GF_SERVER_SERVE_FROM_SUB_PATH:   "true"
+      GF_ANALYTICS_REPORTING_ENABLED:  "false"
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - ./monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./monitoring/grafana/dashboards:/var/lib/grafana/dashboards:ro
+    depends_on:
+      - loki
+
 volumes:
   pgdata:
+  logs:
+  loki-data:
+  grafana-data:

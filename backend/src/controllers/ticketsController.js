@@ -1,3 +1,4 @@
+import logger from '../config/logger.js';
 import { Tickets, TicketsType, TicketsMessage, User } from "../models/index.js";
 import { notifyAssignee } from "../services/notificationService.js";
 import { Op } from "sequelize";
@@ -57,7 +58,7 @@ export async function createTickets(req, res) {
 
     res.json({ tickets });
   } catch (err) {
-    console.error(err);
+    logger.error(err);
     res.status(500).json({ message: "Erreur création tickets", error: err.message });
   }
 }
@@ -90,7 +91,7 @@ export async function listTickets(req, res) {
 
     res.json({ tickets });
   } catch (err) {
-    console.error(err);
+    logger.error(err);
     res.status(500).json({ message: "Erreur list tickets" });
   }
 }
@@ -112,7 +113,7 @@ export async function getTicketsDetail(req, res) {
     }
     res.json({ tickets });
   } catch (err) {
-    console.error(err);
+    logger.error(err);
     res.status(500).json({ message: "Erreur tickets detail" });
   }
 }
@@ -150,7 +151,7 @@ export async function postMessage(req, res) {
 
     res.json({ message: msg });
   } catch (err) {
-    console.error(err);
+    logger.error(err);
     res.status(500).json({ message: "Erreur envoi message" });
   }
 }
@@ -160,7 +161,7 @@ export const getAllTicketTypes = async (req, res) => {
     const types = await TicketsType.findAll();
     res.status(200).json({ types });
   } catch (error) {
-    console.error("Erreur getAllTicketTypes:", error);
+    logger.error("Erreur getAllTicketTypes:", error);
     res.status(500).json({ message: "Erreur serveur" });
   }
 };
@@ -178,7 +179,7 @@ export async function updateTicketStatus(req, res) {
 
     res.json({ message: "Statut mis à jour", ticket });
   } catch (err) {
-    console.error(err);
+    logger.error(err);
     res.status(500).json({ message: "Erreur mise à jour statut" });
   }
 }

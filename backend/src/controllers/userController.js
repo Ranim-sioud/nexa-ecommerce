@@ -1,3 +1,4 @@
+import logger from '../config/logger.js';
 import { User, Vendeur, Fournisseur } from "../models/index.js";
 import bcrypt from "bcrypt";
 import argon2 from "argon2";
@@ -80,7 +81,7 @@ export async function getMe(req, res) {
 
     res.json(response);
   } catch (err) {
-    console.error(err);
+    logger.error(err);
     res.status(500).json({ message: "Erreur serveur" });
   }
 }
@@ -128,7 +129,7 @@ export async function updateMe(req, res) {
         role: user.role,
       } });
   } catch (err) {
-    console.error(err);
+    logger.error(err);
     res.status(500).json({ message: "Erreur serveur" });
   }
 }
@@ -156,7 +157,7 @@ export async function uploadProfileImage(req, res) {
 
     res.json({ message: "Image mise à jour ✅", profileImage: user.image_url });
   } catch (err) {
-    console.error(err);
+    logger.error(err);
     res.status(500).json({ message: "Erreur serveur" });
   }
 }
@@ -180,7 +181,7 @@ export async function getProfile(req, res) {
         role: user.role,
       }});
   } catch (err) {
-    console.error(err);
+    logger.error(err);
     res.status(500).json({ message: "Erreur serveur" });
   }
 }
@@ -229,7 +230,7 @@ export async function updateProfile(req, res) {
         role: user.role,
       } });
   } catch (err) {
-    console.error(err);
+    logger.error(err);
     res.status(500).json({ message: "Erreur serveur" });
   }
 }
@@ -246,7 +247,7 @@ export async function getFournisseurs(req, res) {
     
     res.json(fournisseurs);
   } catch (err) {
-    console.error(err);
+    logger.error(err);
     res.status(500).json({ message: "Erreur serveur" });
   }
 }
@@ -295,7 +296,7 @@ export const getSoldeUtilisateur = async (req, res) => {
 
     return res.json({ solde: Number(solde).toFixed(2) });
   } catch (error) {
-    console.error("Erreur récupération solde:", error);
+    logger.error("Erreur récupération solde:", error);
     res.status(500).json({ message: "Erreur serveur", error: error.message });
   }
 };

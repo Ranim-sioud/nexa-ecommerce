@@ -1,3 +1,4 @@
+import logger from '../config/logger.js';
 import { Task, Permission, User, Tickets, TicketsType, Produit, Media, Variation, Categorie, Fournisseur, MesProduit, LigneCommande, SousCommande, Commande, Client } from '../models/index.js';
 import { requirePermission } from '../middlewares/permissionMiddleware.js';
 import { Op } from 'sequelize';
@@ -62,7 +63,7 @@ export const getDashboard = async (req, res) => {
     });
 
   } catch (error) {
-    console.error('Erreur getDashboard:', error);
+    logger.error('Erreur getDashboard:', error);
     res.status(500).json({ message: 'Erreur serveur', error: error.message });
   }
 };
@@ -106,14 +107,14 @@ export const manageUsers = async (req, res) => {
     });
 
   } catch (error) {
-    console.error('Erreur manageUsers:', error);
+    logger.error('Erreur manageUsers:', error);
     res.status(500).json({ message: 'Erreur serveur', error: error.message });
   }
 };
 
 export const manageProducts = async (req, res) => {
   try {
-    console.log("=== DEBUT manageProducts ===");
+    logger.info("=== DEBUT manageProducts ===");
 
     // 1. Récupérer l'ID de l'admin
     const adminUser = await User.findOne({
@@ -153,7 +154,7 @@ export const manageProducts = async (req, res) => {
       ]
     });
 
-    console.log(`✓ ${produits.length} produits admin trouvés`);
+    logger.info(`✓ ${produits.length} produits admin trouvés`);
 
     if (produits.length === 0) {
       return res.json({
@@ -243,7 +244,7 @@ export const manageProducts = async (req, res) => {
     });
 
   } catch (error) {
-    console.error('❌ Erreur manageProducts:', error);
+    logger.error('❌ Erreur manageProducts:', error);
     res.status(500).json({ 
       message: 'Erreur serveur',
       error: error.message,
@@ -261,7 +262,7 @@ function generateProductCode() {
 export const createProductSpecialist = async (req, res) => {
   // Vérifier si sequelize est disponible
   if (!sequelize) {
-    console.error('❌ sequelize non défini');
+    logger.error('❌ sequelize non défini');
     return res.status(500).json({ 
       message: "Erreur de configuration de la base de données" 
     });
@@ -270,9 +271,9 @@ export const createProductSpecialist = async (req, res) => {
   const t = await sequelize.transaction();
   
   try {
-    console.log("=== DEBUT createProductSpecialist ===");
-    console.log("Body:", req.body);
-    console.log("Files:", req.files?.length || 0, "fichiers");
+    logger.info("=== DEBUT createProductSpecialist ===");
+    logger.info("Body:", req.body);
+    logger.info("Files:", req.files?.length || 0, "fichiers");
 
     const { nom, description, livraison, prix_gros, id_categorie, id_externe } = req.body;
     const stock = req.body.stock !== undefined ? parseInt(req.body.stock, 10) : 0;
@@ -345,11 +346,11 @@ export const createProductSpecialist = async (req, res) => {
       ...(id_externe ? { id_externe: id_externe.trim() } : {})
     }, { transaction: t });
 
-    console.log(`✅ Produit créé: ${produit.id}`);
+    logger.info(`✅ Produit créé: ${produit.id}`);
 
     // Gestion des médias Cloudinary
     if (req.files && req.files.length > 0) {
-      console.log(`📁 Création de ${req.files.length} médias`);
+      logger.info(`📁 Création de ${req.files.length} médias`);
       
       const mediasToCreate = req.files.map((file) => ({
         id_produit: produit.id,
@@ -360,12 +361,12 @@ export const createProductSpecialist = async (req, res) => {
       }));
       
       await Media.bulkCreate(mediasToCreate, { transaction: t });
-      console.log(`✅ ${req.files.length} médias créés`);
+      logger.info(`✅ ${req.files.length} médias créés`);
     }
 
     // Création des variations
     if (parsedVariations.length > 0) {
-      console.log(`🔄 Création de ${parsedVariations.length} variations`);
+      logger.info(`🔄 Création de ${parsedVariations.length} variations`);
       
       const variationsToCreate = parsedVariations.map((v) => {
         const isSingle = parsedVariations.length === 1;
@@ -388,7 +389,7 @@ export const createProductSpecialist = async (req, res) => {
       });
       
       await Variation.bulkCreate(variationsToCreate, { transaction: t });
-      console.log(`✅ ${parsedVariations.length} variations créées`);
+      logger.info(`✅ ${parsedVariations.length} variations créées`);
     }
 
     // Charger les relations de manière optimisée
@@ -443,7 +444,7 @@ export const createProductSpecialist = async (req, res) => {
       createdByAdmin: true
     };
 
-    console.log(`✅ Produit ${produit.id} créé avec succès`);
+    logger.info(`✅ Produit ${produit.id} créé avec succès`);
 
     res.status(201).json({ 
       message: "Produit créé avec succès", 
@@ -452,7 +453,7 @@ export const createProductSpecialist = async (req, res) => {
 
   } catch (error) {
     await t.rollback();
-    console.error('❌ Erreur createProductSpecialist:', error);
+    logger.error('❌ Erreur createProductSpecialist:', error);
     
     // Erreur spécifique pour les doublons d'ID externe
     if (error.name === 'SequelizeUniqueConstraintError') {
@@ -482,32 +483,32 @@ export const updateProductSpecialist = async (req, res) => {
   let t;
   
   try {
-    console.log("=== DEBUT updateProductSpecialist ===");
-    console.log("Headers:", req.headers);
-    console.log("User ID:", req.user?.id);
-    console.log("Params:", req.params);
-    console.log("Body keys:", Object.keys(req.body));
-    console.log("Files count:", req.files?.length || 0);
+    logger.info("=== DEBUT updateProductSpecialist ===");
+    logger.info("Headers:", req.headers);
+    logger.info("User ID:", req.user?.id);
+    logger.info("Params:", req.params);
+    logger.info("Body keys:", Object.keys(req.body));
+    logger.info("Files count:", req.files?.length || 0);
     
     const { id } = req.params;
     const userId = req.user?.id;
     
-    console.log(`📦 Produit ID: ${id}`);
-    console.log(`👤 Utilisateur ID: ${userId}`);
+    logger.info(`📦 Produit ID: ${id}`);
+    logger.info(`👤 Utilisateur ID: ${userId}`);
 
     // Initialiser la transaction
     t = await sequelize.transaction();
-    console.log(`✅ Transaction créée`);
+    logger.info(`✅ Transaction créée`);
 
     // 1. Récupérer l'utilisateur connecté
-    console.log(`🔍 Recherche utilisateur ${userId}...`);
+    logger.info(`🔍 Recherche utilisateur ${userId}...`);
     const user = await User.findByPk(userId, { 
       attributes: ['id', 'nom', 'role'],
       transaction: t 
     });
 
     if (!user) {
-      console.log(`❌ Utilisateur non trouvé`);
+      logger.info(`❌ Utilisateur non trouvé`);
       await t.rollback();
       return res.status(401).json({ 
         success: false,
@@ -515,14 +516,14 @@ export const updateProductSpecialist = async (req, res) => {
       });
     }
 
-    console.log(`👤 Utilisateur connecté: ${user.nom}, Rôle: ${user.role}`);
+    logger.info(`👤 Utilisateur connecté: ${user.nom}, Rôle: ${user.role}`);
 
     // 2. Vérifier si l'utilisateur est un spécialiste
     const userRole = user.role;
     const isSpecialist = userRole === 'specialist' || userRole === 'specialiste';
     
     if (!isSpecialist) {
-      console.log(`❌ Utilisateur n'est pas un spécialiste: ${userRole}`);
+      logger.info(`❌ Utilisateur n'est pas un spécialiste: ${userRole}`);
       await t.rollback();
       return res.status(403).json({ 
         success: false,
@@ -531,10 +532,10 @@ export const updateProductSpecialist = async (req, res) => {
       });
     }
 
-    console.log(`✅ Utilisateur est un spécialiste`);
+    logger.info(`✅ Utilisateur est un spécialiste`);
 
     // 3. Vérifier si le produit existe
-    console.log(`🔍 Recherche produit ${id}...`);
+    logger.info(`🔍 Recherche produit ${id}...`);
     const produit = await Produit.findByPk(id, {
       attributes: [
         "id", "code", "nom", "description", "livraison", 
@@ -545,7 +546,7 @@ export const updateProductSpecialist = async (req, res) => {
     });
 
     if (!produit) {
-      console.log(`❌ Produit non trouvé`);
+      logger.info(`❌ Produit non trouvé`);
       await t.rollback();
       return res.status(404).json({ 
         success: false,
@@ -553,18 +554,18 @@ export const updateProductSpecialist = async (req, res) => {
       });
     }
 
-    console.log(`✅ Produit trouvé: ${produit.nom}`);
-    console.log(`📋 ID Fournisseur: ${produit.id_fournisseur}`);
+    logger.info(`✅ Produit trouvé: ${produit.nom}`);
+    logger.info(`📋 ID Fournisseur: ${produit.id_fournisseur}`);
     
     // 4. Vérifier si le fournisseur du produit existe et est un admin
-    console.log(`🔍 Recherche fournisseur ${produit.id_fournisseur}...`);
+    logger.info(`🔍 Recherche fournisseur ${produit.id_fournisseur}...`);
     const fournisseur = await User.findByPk(produit.id_fournisseur, {
       attributes: ['id', 'role', 'nom', 'email'],
       transaction: t
     });
 
     if (!fournisseur) {
-      console.log(`❌ Fournisseur non trouvé`);
+      logger.info(`❌ Fournisseur non trouvé`);
       await t.rollback();
       return res.status(404).json({ 
         success: false,
@@ -572,14 +573,14 @@ export const updateProductSpecialist = async (req, res) => {
       });
     }
 
-    console.log(`👨‍💼 Fournisseur du produit: ${fournisseur.nom}, Rôle: ${fournisseur.role}`);
+    logger.info(`👨‍💼 Fournisseur du produit: ${fournisseur.nom}, Rôle: ${fournisseur.role}`);
 
     // 5. Vérifier si le produit appartient à un admin
     const fournisseurRole = fournisseur.role;
     const isAdmin = fournisseurRole === 'admin';
     
     if (!isAdmin) {
-      console.log(`❌ Produit n'appartient pas à un admin`);
+      logger.info(`❌ Produit n'appartient pas à un admin`);
       await t.rollback();
       return res.status(403).json({ 
         success: false,
@@ -591,24 +592,24 @@ export const updateProductSpecialist = async (req, res) => {
       });
     }
 
-    console.log(`✅ Produit appartient à un administrateur`);
-    console.log(`✅ Autorisation accordée`);
+    logger.info(`✅ Produit appartient à un administrateur`);
+    logger.info(`✅ Autorisation accordée`);
 
     // 6. VALIDATION DES DONNÉES
-    console.log("=== VALIDATION DES DONNÉES ===");
-    console.log("Body reçu:", JSON.stringify(req.body, null, 2));
-    console.log("Files reçus:", req.files?.length || 0);
+    logger.info("=== VALIDATION DES DONNÉES ===");
+    logger.info("Body reçu:", JSON.stringify(req.body, null, 2));
+    logger.info("Files reçus:", req.files?.length || 0);
 
     const { nom, description, livraison, prix_gros } = req.body;
     const stock = req.body.stock !== undefined ? parseInt(req.body.stock, 10) : produit.stock;
     const id_externe = req.body.id_externe;
     const id_categorie = req.body.id_categorie;
 
-    console.log("Champs extraits:", { nom, description, livraison, prix_gros, stock, id_externe, id_categorie });
+    logger.info("Champs extraits:", { nom, description, livraison, prix_gros, stock, id_externe, id_categorie });
 
     // Validation des champs obligatoires
     if (!nom || !nom.trim()) {
-      console.log(`❌ Nom manquant`);
+      logger.info(`❌ Nom manquant`);
       await t.rollback();
       return res.status(400).json({ 
         success: false,
@@ -617,7 +618,7 @@ export const updateProductSpecialist = async (req, res) => {
     }
 
     if (!id_categorie) {
-      console.log(`❌ Catégorie manquante`);
+      logger.info(`❌ Catégorie manquante`);
       await t.rollback();
       return res.status(400).json({ 
         success: false,
@@ -628,13 +629,13 @@ export const updateProductSpecialist = async (req, res) => {
     // 7. VALIDATION DES VARIATIONS
     let parsedVariations = [];
     if (req.body.variations) {
-      console.log(`🔍 Validation des variations...`);
+      logger.info(`🔍 Validation des variations...`);
       try {
         parsedVariations = JSON.parse(req.body.variations);
-        console.log(`✅ Variations parsées:`, parsedVariations);
+        logger.info(`✅ Variations parsées:`, parsedVariations);
         
         if (!Array.isArray(parsedVariations)) {
-          console.log(`❌ Variations n'est pas un tableau`);
+          logger.info(`❌ Variations n'est pas un tableau`);
           await t.rollback();
           return res.status(400).json({ 
             success: false,
@@ -646,7 +647,7 @@ export const updateProductSpecialist = async (req, res) => {
         if (parsedVariations.length === 1) {
           const v = parsedVariations[0];
           if (!v.couleur && !v.taille) {
-            console.log(`❌ Une variation nécessite couleur ou taille`);
+            logger.info(`❌ Une variation nécessite couleur ou taille`);
             await t.rollback();
             return res.status(400).json({
               success: false,
@@ -657,7 +658,7 @@ export const updateProductSpecialist = async (req, res) => {
           if (v.stock !== undefined && String(v.stock).trim() !== "") {
             const vStock = parseInt(v.stock, 10);
             if (isNaN(vStock)) {
-              console.log(`❌ Stock variation invalide`);
+              logger.info(`❌ Stock variation invalide`);
               await t.rollback();
               return res.status(400).json({ 
                 success: false,
@@ -665,7 +666,7 @@ export const updateProductSpecialist = async (req, res) => {
               });
             }
             if (vStock !== stock) {
-              console.log(`❌ Stock variation ≠ stock global`);
+              logger.info(`❌ Stock variation ≠ stock global`);
               await t.rollback();
               return res.status(400).json({
                 success: false,
@@ -677,7 +678,7 @@ export const updateProductSpecialist = async (req, res) => {
           let sommeStock = 0;
           for (const v of parsedVariations) {
             if (!v.couleur || !v.taille || v.prix_gros === undefined || v.stock === undefined || String(v.stock).trim() === "") {
-              console.log(`❌ Champs variation manquants`);
+              logger.info(`❌ Champs variation manquants`);
               await t.rollback();
               return res.status(400).json({
                 success: false,
@@ -686,7 +687,7 @@ export const updateProductSpecialist = async (req, res) => {
             }
             const vStock = parseInt(v.stock, 10);
             if (isNaN(vStock)) {
-              console.log(`❌ Stock variation invalide`);
+              logger.info(`❌ Stock variation invalide`);
               await t.rollback();
               return res.status(400).json({ 
                 success: false,
@@ -696,7 +697,7 @@ export const updateProductSpecialist = async (req, res) => {
             sommeStock += vStock;
           }
           if (sommeStock !== stock) {
-            console.log(`❌ Somme stocks ≠ stock global`);
+            logger.info(`❌ Somme stocks ≠ stock global`);
             await t.rollback();
             return res.status(400).json({
               success: false,
@@ -706,7 +707,7 @@ export const updateProductSpecialist = async (req, res) => {
         }
         
       } catch (e) {
-        console.log(`❌ Erreur parsing variations:`, e.message);
+        logger.info(`❌ Erreur parsing variations:`, e.message);
         await t.rollback();
         return res.status(400).json({ 
           success: false,
@@ -718,7 +719,7 @@ export const updateProductSpecialist = async (req, res) => {
 
     // 8. VÉRIFICATION ID EXTERNE UNIQUE
     if (id_externe !== undefined && id_externe !== null && id_externe !== produit.id_externe) {
-      console.log(`🔍 Vérification ID externe: ${id_externe}`);
+      logger.info(`🔍 Vérification ID externe: ${id_externe}`);
       const idExterneStr = String(id_externe).trim();
       if (idExterneStr !== "") {
         const existingProduct = await Produit.findOne({
@@ -730,7 +731,7 @@ export const updateProductSpecialist = async (req, res) => {
         });
         
         if (existingProduct) {
-          console.log(`❌ ID externe déjà utilisé`);
+          logger.info(`❌ ID externe déjà utilisé`);
           await t.rollback();
           return res.status(400).json({ 
             success: false,
@@ -742,7 +743,7 @@ export const updateProductSpecialist = async (req, res) => {
 
     // 9. VÉRIFICATION ID EXTERNE DES VARIATIONS
     if (parsedVariations.length > 0) {
-      console.log(`🔍 Vérification IDs externes variations`);
+      logger.info(`🔍 Vérification IDs externes variations`);
       for (const v of parsedVariations) {
         if (v.id_externe !== undefined && v.id_externe !== null && v.id_externe !== "") {
           const idExterneVariation = String(v.id_externe).trim();
@@ -756,7 +757,7 @@ export const updateProductSpecialist = async (req, res) => {
             });
             
             if (existingVariation) {
-              console.log(`❌ ID externe variation déjà utilisé: ${idExterneVariation}`);
+              logger.info(`❌ ID externe variation déjà utilisé: ${idExterneVariation}`);
               await t.rollback();
               return res.status(400).json({ 
                 success: false,
@@ -769,7 +770,7 @@ export const updateProductSpecialist = async (req, res) => {
     }
 
     // 10. PRÉPARATION DES DONNÉES DE MISE À JOUR
-    console.log(`📝 Préparation données mise à jour...`);
+    logger.info(`📝 Préparation données mise à jour...`);
     const updateData = {
       nom: nom.trim(),
       description: description?.trim() || "",
@@ -789,27 +790,27 @@ export const updateProductSpecialist = async (req, res) => {
       }
     }
 
-    console.log(`📋 Données de mise à jour:`, updateData);
+    logger.info(`📋 Données de mise à jour:`, updateData);
 
     // 11. MISE À JOUR DU PRODUIT
-    console.log(`🔄 Mise à jour produit...`);
+    logger.info(`🔄 Mise à jour produit...`);
     await produit.update(updateData, { transaction: t });
-    console.log(`✅ Produit mis à jour`);
+    logger.info(`✅ Produit mis à jour`);
 
     // 12. GESTION DES VARIATIONS
     if (parsedVariations.length > 0) {
-      console.log(`🔄 Gestion de ${parsedVariations.length} variations`);
+      logger.info(`🔄 Gestion de ${parsedVariations.length} variations`);
       
       // Supprimer les variations existantes
-      console.log(`🗑️ Suppression variations existantes...`);
+      logger.info(`🗑️ Suppression variations existantes...`);
       await Variation.destroy({
         where: { id_produit: id },
         transaction: t
       });
-      console.log(`🗑️ Anciennes variations supprimées`);
+      logger.info(`🗑️ Anciennes variations supprimées`);
 
       // Créer les nouvelles variations
-      console.log(`➕ Création nouvelles variations...`);
+      logger.info(`➕ Création nouvelles variations...`);
       const variationsToCreate = parsedVariations.map((v) => {
         const isSingle = parsedVariations.length === 1;
         
@@ -839,21 +840,21 @@ export const updateProductSpecialist = async (req, res) => {
       });
 
       await Variation.bulkCreate(variationsToCreate, { transaction: t });
-      console.log(`✅ ${variationsToCreate.length} variations créées`);
+      logger.info(`✅ ${variationsToCreate.length} variations créées`);
     } else {
       // Si pas de variations, supprimer les existantes
-      console.log(`🗑️ Suppression toutes variations...`);
+      logger.info(`🗑️ Suppression toutes variations...`);
       await Variation.destroy({
         where: { id_produit: id },
         transaction: t
       });
-      console.log(`🗑️ Toutes variations supprimées`);
+      logger.info(`🗑️ Toutes variations supprimées`);
     }
 
     // 13. GESTION DES MÉDIAS (Cloudinary)
     // Ajouter de nouveaux médias
     if (req.files && req.files.length > 0) {
-      console.log(`📁 Ajout de ${req.files.length} nouveaux médias`);
+      logger.info(`📁 Ajout de ${req.files.length} nouveaux médias`);
       
       const mediasToCreate = req.files.map((file) => {
         const isVideo = file.mimetype.startsWith("video");
@@ -868,7 +869,7 @@ export const updateProductSpecialist = async (req, res) => {
       });
 
       await Media.bulkCreate(mediasToCreate, { transaction: t });
-      console.log(`✅ ${mediasToCreate.length} nouveaux médias créés`);
+      logger.info(`✅ ${mediasToCreate.length} nouveaux médias créés`);
     }
 
     // Supprimer les médias marqués pour suppression
@@ -878,17 +879,17 @@ export const updateProductSpecialist = async (req, res) => {
         const mediasToDelete = JSON.parse(req.body.mediasToDelete);
         
         if (Array.isArray(mediasToDelete) && mediasToDelete.length > 0) {
-          console.log(`🗑️ Suppression de ${mediasToDelete.length} médias`);
+          logger.info(`🗑️ Suppression de ${mediasToDelete.length} médias`);
           
           // Récupérer les médias à supprimer
-          console.log(`🔍 Récupération médias à supprimer...`);
+          logger.info(`🔍 Récupération médias à supprimer...`);
           const medias = await Media.findAll({
             where: { id: mediasToDelete, id_produit: id },
             attributes: ['id', 'type'],
             transaction: t
           });
 
-          console.log(`📋 Médias trouvés:`, medias.map(m => m.id));
+          logger.info(`📋 Médias trouvés:`, medias.map(m => m.id));
 
           // Stocker pour suppression Cloudinary
           for (const media of medias) {
@@ -901,22 +902,22 @@ export const updateProductSpecialist = async (req, res) => {
           }
           
           // Supprimer de la base de données
-          console.log(`🗑️ Suppression de la base...`);
+          logger.info(`🗑️ Suppression de la base...`);
           await Media.destroy({
             where: { id: mediasToDelete, id_produit: id },
             transaction: t
           });
           
-          console.log(`✅ ${mediasToDelete.length} médias supprimés de la base`);
+          logger.info(`✅ ${mediasToDelete.length} médias supprimés de la base`);
         }
       } catch (e) {
-        console.warn("⚠️ Erreur lors de la suppression des médias:", e.message);
+        logger.warn("⚠️ Erreur lors de la suppression des médias:", e.message);
         // Continuer même en cas d'erreur
       }
     }
 
     // 14. CHARGER LE PRODUIT MIS À JOUR
-    console.log(`📥 Chargement du produit mis à jour...`);
+    logger.info(`📥 Chargement du produit mis à jour...`);
     
     const [medias, variations, categorie] = await Promise.all([
       Media.findAll({
@@ -939,29 +940,29 @@ export const updateProductSpecialist = async (req, res) => {
       })
     ]);
 
-    console.log(`✅ Données chargées:`, {
+    logger.info(`✅ Données chargées:`, {
       medias: medias.length,
       variations: variations.length,
       categorie: !!categorie
     });
 
     // COMMIT
-    console.log(`💾 Commit transaction...`);
+    logger.info(`💾 Commit transaction...`);
     await t.commit();
-    console.log(`✅ Transaction commitée`);
+    logger.info(`✅ Transaction commitée`);
 
     // 15. SUPPRIMER DE CLOUDINARY APRÈS LE COMMIT
     if (cloudinaryDeletions.length > 0) {
-      console.log(`☁️ Suppression de ${cloudinaryDeletions.length} médias de Cloudinary`);
+      logger.info(`☁️ Suppression de ${cloudinaryDeletions.length} médias de Cloudinary`);
       
       for (const deletion of cloudinaryDeletions) {
         try {
           await cloudinary.uploader.destroy(deletion.public_id, {
             resource_type: deletion.resource_type
           });
-          console.log(`✅ Média ${deletion.public_id} supprimé de Cloudinary`);
+          logger.info(`✅ Média ${deletion.public_id} supprimé de Cloudinary`);
         } catch (cloudinaryError) {
-          console.warn(`⚠️ Impossible de supprimer ${deletion.public_id} de Cloudinary:`, cloudinaryError.message);
+          logger.warn(`⚠️ Impossible de supprimer ${deletion.public_id} de Cloudinary:`, cloudinaryError.message);
         }
       }
     }
@@ -981,8 +982,8 @@ export const updateProductSpecialist = async (req, res) => {
       updatedBySpecialist: true
     };
 
-    console.log(`🎉 Produit ${id} mis à jour avec succès`);
-    console.log("=== FIN updateProductSpecialist ===");
+    logger.info(`🎉 Produit ${id} mis à jour avec succès`);
+    logger.info("=== FIN updateProductSpecialist ===");
 
     res.json({ 
       success: true,
@@ -991,26 +992,26 @@ export const updateProductSpecialist = async (req, res) => {
     });
 
   } catch (error) {
-    console.error('❌❌❌ ERREUR CRITIQUE updateProductSpecialist ❌❌❌');
-    console.error('Nom erreur:', error.name);
-    console.error('Message:', error.message);
-    console.error('Stack:', error.stack);
+    logger.error('❌❌❌ ERREUR CRITIQUE updateProductSpecialist ❌❌❌');
+    logger.error('Nom erreur:', error.name);
+    logger.error('Message:', error.message);
+    logger.error('Stack:', error.stack);
     
     if (error.errors) {
-      console.error('Erreurs Sequelize:', error.errors);
+      logger.error('Erreurs Sequelize:', error.errors);
     }
     
     // Rollback seulement si la transaction existe et n'est pas terminée
     if (t && typeof t.rollback === 'function') {
       try {
-        console.log(`🔄 Tentative de rollback...`);
+        logger.info(`🔄 Tentative de rollback...`);
         await t.rollback();
-        console.log(`🔄 Transaction rollbackée`);
+        logger.info(`🔄 Transaction rollbackée`);
       } catch (rollbackError) {
-        console.error('❌ Erreur lors du rollback:', rollbackError);
+        logger.error('❌ Erreur lors du rollback:', rollbackError);
       }
     } else {
-      console.log(`ℹ️ Pas de transaction à rollback`);
+      logger.info(`ℹ️ Pas de transaction à rollback`);
     }
 
     // Gestion des erreurs spécifiques
@@ -1059,9 +1060,9 @@ export const deleteProductSpecialist = async (req, res) => {
     const { id } = req.params;
     const userId = req.user?.id;
     
-    console.log("=== DEBUT deleteProductSpecialist ===");
-    console.log(`🗑️ Suppression produit ID: ${id}`);
-    console.log(`👤 Utilisateur ID: ${userId}`);
+    logger.info("=== DEBUT deleteProductSpecialist ===");
+    logger.info(`🗑️ Suppression produit ID: ${id}`);
+    logger.info(`👤 Utilisateur ID: ${userId}`);
 
     // 1. Récupérer l'utilisateur connecté
     const user = await User.findByPk(userId, { 
@@ -1077,7 +1078,7 @@ export const deleteProductSpecialist = async (req, res) => {
       });
     }
 
-    console.log(`👤 Utilisateur connecté: ${user.nom}, Rôle: ${user.role}`);
+    logger.info(`👤 Utilisateur connecté: ${user.nom}, Rôle: ${user.role}`);
 
     // 2. Vérifier si l'utilisateur est un spécialiste
     // Comparer le rôle exact comme dans la fonction de création
@@ -1093,7 +1094,7 @@ export const deleteProductSpecialist = async (req, res) => {
       });
     }
 
-    console.log(`✅ Utilisateur est un spécialiste (rôle: ${userRole})`);
+    logger.info(`✅ Utilisateur est un spécialiste (rôle: ${userRole})`);
 
     // 3. Vérifier si le produit existe
     const produit = await Produit.findByPk(id, {
@@ -1115,8 +1116,8 @@ export const deleteProductSpecialist = async (req, res) => {
       });
     }
 
-    console.log(`📦 Produit trouvé: ${produit.nom}`);
-    console.log(`👨‍💼 Fournisseur ID: ${produit.id_fournisseur}`);
+    logger.info(`📦 Produit trouvé: ${produit.nom}`);
+    logger.info(`👨‍💼 Fournisseur ID: ${produit.id_fournisseur}`);
     
     // 4. Vérifier si le fournisseur du produit existe et est un admin
     const fournisseur = await User.findByPk(produit.id_fournisseur, {
@@ -1132,7 +1133,7 @@ export const deleteProductSpecialist = async (req, res) => {
       });
     }
 
-    console.log(`👨‍💼 Fournisseur du produit: ${fournisseur.nom}, Rôle: ${fournisseur.role}`);
+    logger.info(`👨‍💼 Fournisseur du produit: ${fournisseur.nom}, Rôle: ${fournisseur.role}`);
 
     // 5. Vérifier si le produit appartient à un admin
     // Même logique que dans createProductSpecialist
@@ -1151,11 +1152,11 @@ export const deleteProductSpecialist = async (req, res) => {
       });
     }
 
-    console.log(`✅ Produit appartient à un administrateur (rôle: ${fournisseurRole})`);
-    console.log(`✅ Autorisation accordée: Spécialiste peut supprimer le produit d'un admin`);
+    logger.info(`✅ Produit appartient à un administrateur (rôle: ${fournisseurRole})`);
+    logger.info(`✅ Autorisation accordée: Spécialiste peut supprimer le produit d'un admin`);
 
     // 6. Récupérer toutes les lignes de commande liées à ce produit
-    console.log("\n=== Recherche des commandes liées ===");
+    logger.info("\n=== Recherche des commandes liées ===");
     const lignes = await LigneCommande.findAll({
       where: { id_produit: id },
       include: [
@@ -1171,7 +1172,7 @@ export const deleteProductSpecialist = async (req, res) => {
       transaction: t
     });
 
-    console.log(`📊 ${lignes.length} ligne(s) de commande trouvée(s) pour ce produit`);
+    logger.info(`📊 ${lignes.length} ligne(s) de commande trouvée(s) pour ce produit`);
 
     // 7. Grouper les données par sous-commande et commande
     const sousCommandesData = new Map();
@@ -1218,20 +1219,20 @@ export const deleteProductSpecialist = async (req, res) => {
         where: { id: { [Op.in]: allLigneIds } },
         transaction: t
       });
-      console.log(`✅ ${allLigneIds.length} ligne(s) de commande supprimée(s)`);
+      logger.info(`✅ ${allLigneIds.length} ligne(s) de commande supprimée(s)`);
     }
 
     // 9. Vérifier chaque sous-commande pour voir si elle a encore des lignes
-    console.log("\n=== Vérification des sous-commandes ===");
+    logger.info("\n=== Vérification des sous-commandes ===");
     const sousCommandesASupprimer = new Set();
     
     for (const [sousCommandeId, data] of sousCommandesData) {
-      console.log(`🔍 Vérification sous-commande ${sousCommandeId} (statut: ${data.statut}):`);
+      logger.info(`🔍 Vérification sous-commande ${sousCommandeId} (statut: ${data.statut}):`);
       
       // Ne pas supprimer les sous-commandes en cours de livraison ou livrées
       if (data.statut === "livree" || data.statut === "en_cours_livraison" || 
           data.statut === "Réception_dépôt" || data.statut === "Colis enlevé") {
-        console.log(`   ⚠️ Sous-commande ${sousCommandeId} en statut "${data.statut}" → CONSERVÉE`);
+        logger.info(`   ⚠️ Sous-commande ${sousCommandeId} en statut "${data.statut}" → CONSERVÉE`);
         continue;
       }
       
@@ -1244,13 +1245,13 @@ export const deleteProductSpecialist = async (req, res) => {
         transaction: t
       });
       
-      console.log(`   Autres lignes dans cette sous-commande: ${autresLignes}`);
+      logger.info(`   Autres lignes dans cette sous-commande: ${autresLignes}`);
       
       if (autresLignes === 0) {
         sousCommandesASupprimer.add(sousCommandeId);
-        console.log(`   ❌ Sous-commande ${sousCommandeId} sera supprimée (vide)`);
+        logger.info(`   ❌ Sous-commande ${sousCommandeId} sera supprimée (vide)`);
       } else {
-        console.log(`   ✅ Sous-commande ${sousCommandeId} conservée (contient ${autresLignes} autres lignes)`);
+        logger.info(`   ✅ Sous-commande ${sousCommandeId} conservée (contient ${autresLignes} autres lignes)`);
       }
     }
 
@@ -1260,20 +1261,20 @@ export const deleteProductSpecialist = async (req, res) => {
         where: { id: { [Op.in]: Array.from(sousCommandesASupprimer) } },
         transaction: t
       });
-      console.log(`✅ ${sousCommandesASupprimer.size} sous-commande(s) supprimée(s)`);
+      logger.info(`✅ ${sousCommandesASupprimer.size} sous-commande(s) supprimée(s)`);
     }
 
     // 11. Vérifier chaque commande pour voir si elle a encore des sous-commandes
-    console.log("\n=== Vérification des commandes ===");
+    logger.info("\n=== Vérification des commandes ===");
     const commandesASupprimer = new Set();
     
     for (const [commandeId, data] of commandesData) {
-      console.log(`🔍 Vérification commande ${commandeId} (état: ${data.etat}):`);
+      logger.info(`🔍 Vérification commande ${commandeId} (état: ${data.etat}):`);
       
       // Ne pas supprimer les commandes livrées ou en cours de livraison
       if (data.etat === "livree" || data.etat === "en_cours_livraison" || 
           data.etat === "partiellement_livree") {
-        console.log(`   ⚠️ Commande ${commandeId} en état "${data.etat}" → CONSERVÉE`);
+        logger.info(`   ⚠️ Commande ${commandeId} en état "${data.etat}" → CONSERVÉE`);
         continue;
       }
       
@@ -1286,7 +1287,7 @@ export const deleteProductSpecialist = async (req, res) => {
         transaction: t
       });
       
-      console.log(`   Autres sous-commandes dans cette commande: ${autresSousCommandes}`);
+      logger.info(`   Autres sous-commandes dans cette commande: ${autresSousCommandes}`);
       
       // Vérifier les sous-commandes qui vont être supprimées
       const sousCommandesDeCetteCommandeASupprimer = Array.from(data.sousCommandeIds).filter(
@@ -1297,13 +1298,13 @@ export const deleteProductSpecialist = async (req, res) => {
       const sousCommandesRestantes = autresSousCommandes + 
         (data.sousCommandeIds.size - sousCommandesDeCetteCommandeASupprimer.length);
       
-      console.log(`   Sous-commandes qui resteront après suppression: ${sousCommandesRestantes}`);
+      logger.info(`   Sous-commandes qui resteront après suppression: ${sousCommandesRestantes}`);
       
       if (sousCommandesRestantes === 0) {
         commandesASupprimer.add(commandeId);
-        console.log(`   ❌ Commande ${commandeId} sera supprimée (plus de sous-commandes)`);
+        logger.info(`   ❌ Commande ${commandeId} sera supprimée (plus de sous-commandes)`);
       } else {
-        console.log(`   ✅ Commande ${commandeId} conservée (aura ${sousCommandesRestantes} sous-commandes)`);
+        logger.info(`   ✅ Commande ${commandeId} conservée (aura ${sousCommandesRestantes} sous-commandes)`);
       }
     }
 
@@ -1313,7 +1314,7 @@ export const deleteProductSpecialist = async (req, res) => {
         where: { id: { [Op.in]: Array.from(commandesASupprimer) } },
         transaction: t
       });
-      console.log(`✅ ${commandesASupprimer.size} commande(s) supprimée(s)`);
+      logger.info(`✅ ${commandesASupprimer.size} commande(s) supprimée(s)`);
       
       // Supprimer les clients associés
       for (const commandeId of commandesASupprimer) {
@@ -1332,9 +1333,9 @@ export const deleteProductSpecialist = async (req, res) => {
               where: { id: data.clientId },
               transaction: t
             });
-            console.log(`✅ Client ${data.clientId} supprimé (plus de commandes)`);
+            logger.info(`✅ Client ${data.clientId} supprimé (plus de commandes)`);
           } else {
-            console.log(`⚠️ Client ${data.clientId} conservé (a ${autresCommandesDuClient} autres commandes)`);
+            logger.info(`⚠️ Client ${data.clientId} conservé (a ${autresCommandesDuClient} autres commandes)`);
           }
         }
       }
@@ -1345,11 +1346,11 @@ export const deleteProductSpecialist = async (req, res) => {
       where: { id_produit: id },
       transaction: t
     });
-    console.log("✅ MesProduit supprimé");
+    logger.info("✅ MesProduit supprimé");
 
     // 14. Supprimer les médias Cloudinary
     if (produit.medias && produit.medias.length > 0) {
-      console.log(`Suppression de ${produit.medias.length} médias de Cloudinary...`);
+      logger.info(`Suppression de ${produit.medias.length} médias de Cloudinary...`);
       
       for (const media of produit.medias) {
         if (media.public_id) {
@@ -1357,9 +1358,9 @@ export const deleteProductSpecialist = async (req, res) => {
             await cloudinary.uploader.destroy(media.public_id, {
               resource_type: media.type === "video" ? "video" : "image"
             });
-            console.log(`✅ Média ${media.public_id} supprimé de Cloudinary`);
+            logger.info(`✅ Média ${media.public_id} supprimé de Cloudinary`);
           } catch (cloudinaryError) {
-            console.warn(`⚠️ Impossible de supprimer ${media.public_id} de Cloudinary:`, cloudinaryError.message);
+            logger.warn(`⚠️ Impossible de supprimer ${media.public_id} de Cloudinary:`, cloudinaryError.message);
           }
         }
       }
@@ -1370,18 +1371,18 @@ export const deleteProductSpecialist = async (req, res) => {
       where: { id_produit: id },
       transaction: t
     });
-    console.log("✅ Variations supprimées");
+    logger.info("✅ Variations supprimées");
 
     // 16. Supprimer les médias de la base
     await Media.destroy({
       where: { id_produit: id },
       transaction: t
     });
-    console.log("✅ Médias supprimés de la base");
+    logger.info("✅ Médias supprimés de la base");
 
     // 17. Supprimer le produit
     await produit.destroy({ transaction: t });
-    console.log(`✅ Produit ${id} supprimé`);
+    logger.info(`✅ Produit ${id} supprimé`);
     
     // 18. COMMIT
     await t.commit();
@@ -1404,7 +1405,7 @@ export const deleteProductSpecialist = async (req, res) => {
   } catch (error) {
     await t.rollback();
     
-    console.error('❌ ERREUR deleteProductSpecialist:', error);
+    logger.error('❌ ERREUR deleteProductSpecialist:', error);
     
     if (error.name === 'SequelizeForeignKeyConstraintError') {
       return res.status(400).json({ 
@@ -1433,7 +1434,7 @@ export const deleteProductSpecialist = async (req, res) => {
 export const getProductByIdSpecialist = async (req, res) => {
   try {
     const { id } = req.params;
-    console.log(`🔄 getProductByIdSpecialist optimisé pour produit: ${id}`);
+    logger.info(`🔄 getProductByIdSpecialist optimisé pour produit: ${id}`);
 
     // 1. Récupérer le produit principal
     const produit = await Produit.findByPk(id, {
@@ -1448,7 +1449,7 @@ export const getProductByIdSpecialist = async (req, res) => {
       return res.status(404).json({ message: "Produit non trouvé" });
     }
 
-    console.log(`✅ Produit trouvé: ${produit.nom}`);
+    logger.info(`✅ Produit trouvé: ${produit.nom}`);
 
     // 2. Vérifier que le fournisseur est un admin
     const fournisseur = await Fournisseur.findOne({
@@ -1486,7 +1487,7 @@ export const getProductByIdSpecialist = async (req, res) => {
       })
     ]);
 
-    console.log(`📊 Relations chargées: ${medias.length} médias, ${variations.length} variations`);
+    logger.info(`📊 Relations chargées: ${medias.length} médias, ${variations.length} variations`);
 
     // 4. Assembler le résultat
     const result = {
@@ -1500,11 +1501,11 @@ export const getProductByIdSpecialist = async (req, res) => {
       }
     };
 
-    console.log(`✅ Produit ${id} chargé avec succès`);
+    logger.info(`✅ Produit ${id} chargé avec succès`);
     res.json(result);
 
   } catch (error) {
-    console.error('💥 ERREUR getProductByIdSpecialist:', {
+    logger.error('💥 ERREUR getProductByIdSpecialist:', {
       message: error.message,
       produitId: req.params.id
     });
@@ -1544,7 +1545,7 @@ export const updateUserStatusSpecialist = async (req, res) => {
     res.json({ message: "Mis à jour", user });
 
   } catch (error) {
-    console.error('Erreur updateUserStatusSpecialist:', error);
+    logger.error('Erreur updateUserStatusSpecialist:', error);
     res.status(500).json({ message: "Erreur serveur", error: error.message });
   }
 };
@@ -1572,7 +1573,7 @@ export const getMyTasks = async (req, res) => {
 
     res.json(tasks);
   } catch (error) {
-    console.error('Erreur getMyTasks:', error);
+    logger.error('Erreur getMyTasks:', error);
     res.status(500).json({ message: 'Erreur serveur', error: error.message });
   }
 };
@@ -1598,7 +1599,7 @@ export const updateMyTaskStatus = async (req, res) => {
     res.json({ message: 'Statut mis à jour', task });
 
   } catch (error) {
-    console.error('Erreur updateMyTaskStatus:', error);
+    logger.error('Erreur updateMyTaskStatus:', error);
     res.status(500).json({ message: 'Erreur serveur', error: error.message });
   }
 };

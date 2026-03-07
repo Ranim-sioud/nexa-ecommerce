@@ -1,3 +1,4 @@
+import logger from '../config/logger.js';
 import Produit from "../models/Produit.js";
 import Notification from "../models/Notification.js";
 import MesProduit from "../models/MesProduit.js";
@@ -29,7 +30,7 @@ export const createStockNotification = async (produit, oldStock, newStock) => {
     }
 
   } catch (err) {
-    console.error("Erreur notification:", err);
+    logger.error("Erreur notification:", err);
   }
 };
 
@@ -87,7 +88,7 @@ export const markAllNotificationsAsRead = async (req, res) => {
 
     return res.json({ message: "Toutes les notifications ont été marquées comme lues." });
   } catch (err) {
-    console.error("Erreur mark-all-read:", err);
+    logger.error("Erreur mark-all-read:", err);
     return res.status(500).json({
       message: "Erreur serveur lors du marquage des notifications.",
       error: err.message

@@ -22,6 +22,8 @@ import notificationsRoute from "./routes/notificationsRoute.js";
 import webhook from "./routes/webhook.js";
 import { Produit, sequelize } from './models/index.js';
 import compression from 'compression';
+import { httpLogger } from './middlewares/httpLogger.js';
+import logger from './config/logger.js';
 
 const app = express();
 app.set('trust proxy', 1);
@@ -39,6 +41,7 @@ app.use(helmet({
 }));
 app.use(helmet.hsts({ maxAge: 31536000 }));
 app.use(cookieParser());
+app.use(httpLogger);
 app.use(compression());
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
@@ -109,14 +112,29 @@ app.use('/api/commande', commandesRoutes);
 // health
 app.get('/', (req,res)=> res.json({ ok: true }));
 
+// Global error handler — catches anything thrown by controllers
+app.use((err, req, res, next) => {
+  const status = err.status || err.statusCode || 500;
+  logger.error('Unhandled error', {
+    message: err.message,
+    stack: err.stack,
+    method: req.method,
+    url: req.originalUrl,
+    status,
+    userId: req.user?.id,
+    ip: req.ip,
+  });
+  res.status(status).json({ message: status >= 500 ? 'Erreur serveur' : err.message });
+});
+
 // Verify DB connection on boot. Migrations are run by the Dockerfile CMD
 // before `npm start` (npx sequelize-cli db:migrate && npm start).
 (async () => {
   try {
     await sequelize.authenticate();
-    console.log('✅ Connexion DB établie');
+    logger.info('Database connection established');
   } catch (err) {
-    console.error('❌ Erreur de connexion DB :', err);
+    logger.error('Database connection failed', { error: err.message });
     process.exit(1);
   }
 })();

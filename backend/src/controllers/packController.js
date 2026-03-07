@@ -1,3 +1,4 @@
+import logger from '../config/logger.js';
 import { Pack } from '../models/index.js';
 
 export async function listPacks(req, res) {
@@ -5,7 +6,7 @@ export async function listPacks(req, res) {
     const packs = await Pack.findAll();
     res.json(packs);
   } catch (err) {
-    console.error(err);
+    logger.error(err);
     res.status(500).json({ message: 'Erreur serveur' });
   }
 }
@@ -28,11 +29,11 @@ export async function updatePack(req, res) {
     await pack.update(updateData);
     
     // Log de l'action pour traçabilité
-    console.log(`Pack ${id} modifié par ${req.user?.id || 'admin'}`);
+    logger.info(`Pack ${id} modifié par ${req.user?.id || 'admin'}`);
     
     res.json(pack);
   } catch (err) {
-    console.error(err);
+    logger.error(err);
     res.status(500).json({ message: 'Erreur serveur' });
   }
 }
@@ -62,7 +63,7 @@ export async function deletePack(req, res) {
     await pack.destroy();
     
     // Log de la suppression
-    console.log(`Pack supprimé: ${JSON.stringify(packInfo)} par ${req.user?.id || 'admin'}`);
+    logger.info(`Pack supprimé: ${JSON.stringify(packInfo)} par ${req.user?.id || 'admin'}`);
     
     // Réponse de succès
     res.status(200).json({ 
@@ -71,7 +72,7 @@ export async function deletePack(req, res) {
     });
 
   } catch (err) {
-    console.error('Erreur lors de la suppression du pack:', err);
+    logger.error('Erreur lors de la suppression du pack:', err);
     
     // Gestion spécifique des erreurs de contrainte de clé étrangère
     if (err.name === 'SequelizeForeignKeyConstraintError') {
