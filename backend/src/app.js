@@ -26,6 +26,7 @@ import { httpLogger } from './middlewares/httpLogger.js';
 import logger from './config/logger.js';
 import swaggerUi from 'swagger-ui-express';
 import { swaggerSpec } from './config/swagger.js';
+import jwt from 'jsonwebtoken';
 
 const app = express();
 app.set('trust proxy', 1);
@@ -92,10 +93,27 @@ app.get('/api/health', async (req, res) => {
 } */
 app.use(rateLimit({ windowMs: 60*1000, max: 200 }));
 
+// Guard: admin-only access to API docs
+const requireAdminDocs = (req, res, next) => {
+  const token = req.cookies?.accessToken;
+  if (!token) {
+    return res.status(401).send('401 — Admin authentication required to access API docs. Login at /api/auth/login first.');
+  }
+  try {
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    if (decoded.role !== 'admin') {
+      return res.status(403).send('403 — Admin role required to access API docs.');
+    }
+    next();
+  } catch {
+    return res.status(401).send('401 — Invalid or expired token. Login at /api/auth/login first.');
+  }
+};
+
 // Raw spec must be registered before swagger-ui middleware to avoid interception
-app.get('/api/docs/spec.json', (req, res) => res.json(swaggerSpec));
-// Public API documentation — no auth required
-app.use('/api/docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec, {
+app.get('/api/docs/spec.json', requireAdminDocs, (req, res) => res.json(swaggerSpec));
+// Admin-only API documentation
+app.use('/api/docs', requireAdminDocs, swaggerUi.serve, swaggerUi.setup(swaggerSpec, {
   customSiteTitle: 'Nexa API Docs',
   swaggerOptions: { persistAuthorization: true },
 }));
