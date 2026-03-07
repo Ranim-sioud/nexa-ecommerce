@@ -24,6 +24,8 @@ import { Produit, sequelize } from './models/index.js';
 import compression from 'compression';
 import { httpLogger } from './middlewares/httpLogger.js';
 import logger from './config/logger.js';
+import swaggerUi from 'swagger-ui-express';
+import { swaggerSpec } from './config/swagger.js';
 
 const app = express();
 app.set('trust proxy', 1);
@@ -89,6 +91,13 @@ app.get('/api/health', async (req, res) => {
   app.use(rateLimit({ windowMs: 60*1000, max: 200 }));
 } */
 app.use(rateLimit({ windowMs: 60*1000, max: 200 }));
+
+// Public API documentation — no auth required
+app.use('/api/docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec, {
+  customSiteTitle: 'Nexa API Docs',
+  swaggerOptions: { persistAuthorization: true },
+}));
+app.get('/api/docs/spec.json', (req, res) => res.json(swaggerSpec));
 
 // routes
 app.use('/api/auth', authRoutes);
