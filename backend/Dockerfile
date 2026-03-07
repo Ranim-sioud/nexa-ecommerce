@@ -13,6 +13,9 @@ WORKDIR /app
 COPY --from=builder /app /app
 RUN npm ci --omit=dev --ignore-scripts --prefer-offline
 
+# Create logs directory and give ownership to the node user
+RUN mkdir -p /app/logs && chown -R node:node /app/logs
+
 # Permissions + sécurité minimale
 USER node
 
