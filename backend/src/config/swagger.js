@@ -15,7 +15,7 @@ const options = {
 ## Nexa — Multi-role Marketplace API
 
 > **Access restricted:** This documentation is only accessible to authenticated Admin users.
-> Login via `POST /auth/login` with admin credentials, then reload this page.
+> Login via POST /auth/login with admin credentials, then reload this page.
 
 
 REST API for the Nexa ecommerce platform. Supports four user roles:
