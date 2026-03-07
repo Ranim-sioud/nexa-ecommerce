@@ -146,11 +146,11 @@ export async function activateUser(req, res) {
     // Générer token JWT pour activation
     const token = jwt.sign({ id: user.id, role: user.role }, process.env.JWT_SECRET, { expiresIn: '1d' });
 
-    // Envoyer mail de validation
-    await sendActivationEmail(user, token);
-    
-    // UN SEUL COMMIT ici
+    // Commit before sending email so user creation is not rolled back on mail failure
     await t.commit();
+
+    // Envoyer mail de validation (non-blocking: log error but don't fail the request)
+    sendActivationEmail(user, token).catch(err => console.error('Mail activation failed:', err.message));
 
     res.status(201).json({
       message: 'Vendeur créé. Veuillez activer votre compte via le mail envoyé.',

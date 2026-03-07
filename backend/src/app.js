@@ -24,6 +24,7 @@ import { Produit, sequelize } from './models/index.js';
 import compression from 'compression';
 
 const app = express();
+app.set('trust proxy', 1);
 app.disable("x-powered-by");
 
 app.use(helmet({
