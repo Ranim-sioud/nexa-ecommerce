@@ -1,4 +1,5 @@
 import { useEffect, useState, useRef } from "react";
+import { PageLoader } from "../../components/ui/Loader";
 import { useParams } from "react-router-dom";
 import { get, post } from "./api"; // Assurez-vous que ce chemin est correct
 import {
@@ -276,11 +277,7 @@ export default function TicketDetails() {
     };
 
     if (!ticket) {
-        return (
-            <div className="flex items-center justify-center h-screen">
-                <Loader className="animate-spin mr-2" /> Chargement...
-            </div>
-        );
+        return <PageLoader />;
     }
     const getInitialDescriptionMessage = () => {
     if (!ticket.TicketsMessages || ticket.TicketsMessages.length === 0) {

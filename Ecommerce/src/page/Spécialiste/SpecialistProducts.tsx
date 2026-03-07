@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import { SectionLoader } from "../../components/ui/Loader";
 import {
   Package,
   Search,
@@ -279,7 +280,7 @@ export default function SpecialistProducts() {
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Chargement des produits...</p>
+          <SectionLoader />
         </div>
       </div>
     );

@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import "../../styles/commande.css";
 import api from "../../components/api";
+import { SectionLoader } from "../../components/ui/Loader";
 
 
 const STATUTS = [
@@ -141,7 +142,7 @@ const calculerTotauxFinanciersGlobaux = () => {
 };
 
 
-  if (!sousCommande) return <p className="loading-message">Chargement des détails...</p>;
+  if (!sousCommande) return <SectionLoader />;
 
   const commande = sousCommande.commande;
   const client = commande?.client;

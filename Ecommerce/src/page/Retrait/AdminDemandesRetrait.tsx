@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useMemo } from "react";
 import Swal from "sweetalert2";
 import api from "../../components/api";
+import { SectionLoader } from "../../components/ui/Loader";
 import { 
   Search, 
   Filter, 
@@ -416,7 +417,7 @@ const AdminDemandesRetrait: React.FC = () => {
           {loading ? (
             <div className="p-8 text-center">
               <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-teal-500"></div>
-              <p className="mt-2 text-gray-600">Chargement des demandes...</p>
+              <SectionLoader />
             </div>
           ) : demandesFiltrees.length === 0 ? (
             <div className="p-8 text-center">

@@ -2,14 +2,7 @@ import React, { useEffect, useState } from "react";
 import TableParrainage from "./TableParrainage";
 import TableBonusVendeurs from "./TableBonusVendeurs";
 import api from "../../components/api";
-
-// --- Helpers (Vous pouvez les mettre dans des fichiers séparés) ---
-
-const LoadingSpinner: React.FC = () => (
-  <div className="flex justify-center items-center p-10">
-    <div className="w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
-  </div>
-);
+import { SectionLoader } from "../../components/ui/Loader";
 
 const ErrorMessage: React.FC<{ message: string }> = ({ message }) => (
   <div className="p-4 bg-red-100 text-red-700 border border-red-300 rounded-lg">
@@ -56,7 +49,7 @@ const AdminParrainagePage: React.FC = () => {
   // Affichage conditionnel
   const renderContent = () => {
     if (isLoading) {
-      return <LoadingSpinner />;
+      return <SectionLoader />;
     }
     
     if (error) {

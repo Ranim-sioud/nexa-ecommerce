@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useMemo, useCallback } from "react";
+import { SectionLoader } from "../../components/ui/Loader";
 import { Link } from "react-router-dom";
 import {
     Package,
@@ -508,13 +509,7 @@ export default function MesProduits() {
 
 
     if (loading) {
-        return (
-            <div className="flex justify-center items-center h-64">
-                <div className="animate-pulse text-lg text-gray-600">
-                    Chargement de votre liste de produits...
-                </div>
-            </div>
-        );
+        return <SectionLoader />;
     }
 
     return (

@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import api from "../../components/api";
+import { SectionLoader } from "../../components/ui/Loader";
 
 const HistoriqueTransactions = () => {
   const [transactions, setTransactions] = useState([]);
@@ -33,7 +34,7 @@ const HistoriqueTransactions = () => {
   if (loading) {
     return (
       <div className="flex justify-center items-center h-64">
-        <p className="text-gray-500 animate-pulse">Chargement des transactions...</p>
+        <SectionLoader />
       </div>
     );
   }

@@ -2,6 +2,7 @@ import { useEffect, useState, useCallback } from "react";
 import "./PickupPage.css";
 import { Search, Truck, ChevronsRight, ChevronLeft, ChevronsLeft, ChevronRight } from "lucide-react";
 import api from "../../components/api";
+import { SectionLoader } from "../../components/ui/Loader";
 
 // --- NOUVEAU COMPOSANT DE PAGINATION ---
 function PaginationControls({ total, limit, setLimit, page, setPage, loading }) {
@@ -728,7 +729,7 @@ export default function PickupsPage() {
                 {loading ? (
                     <div className="loading-state">
                         <div className="spinner"></div>
-                        <p>Chargement des pickups...</p>
+                        <SectionLoader />
                     </div>
                 ) : pickups.length === 0 ? (
                     <div className="empty-state">

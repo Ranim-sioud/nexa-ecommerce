@@ -5,6 +5,7 @@ import { ChevronLeft, ChevronRight, Eye, Search, Plus, Download, Filter, RotateC
 import Select from "react-select";
 import Swal from "sweetalert2";
 import api from "../../components/api";
+import { SectionLoader } from "../../components/ui/Loader";
 
 // --- Interfaces et Types génériques ---
 interface ComponentProps extends React.HTMLAttributes<HTMLElement> {}
@@ -702,12 +703,7 @@ const ListeCommandes: React.FC = () => {
     {/* --- TABLE RESPONSIVE --- */}
     <Card className="shadow-xl rounded-2xl overflow-hidden">
       {loading ? (
-        <div className="flex justify-center items-center h-64">
-          <motion.div animate={{ rotate: 360 }} transition={{ duration: 1, repeat: Infinity, ease: "linear" }} className="text-4xl text-indigo-500">
-            🔄
-          </motion.div>
-          <span className="ml-4 text-lg text-gray-600">Chargement...</span>
-        </div>
+        <SectionLoader />
       ) : commandes.length === 0 ? (
         <div className="p-10 text-center text-lg text-gray-500">
           😔 Aucune commande trouvée.

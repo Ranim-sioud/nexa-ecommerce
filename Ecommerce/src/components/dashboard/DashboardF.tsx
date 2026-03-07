@@ -5,6 +5,7 @@ import {
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
 import { Button } from "../ui/button";
+import { SectionLoader } from "../ui/Loader";
 import { format } from "date-fns";
 
 // Composants locaux (non lazy)
@@ -104,7 +105,7 @@ export default function DashboardF() {
     return () => document.removeEventListener("mousedown", onOutside);
   }, [showCalendar]);
 
-  if (loading) return <div className="py-10 text-center">Chargement…</div>;
+  if (loading) return <SectionLoader />;
   if (!dashboardData || !dashboardData.cards) return <div className="py-10 text-center">Aucune donnée</div>;
 
   const { cards, dailyData, monthlyData, topProduits } = dashboardData;
@@ -283,7 +284,7 @@ export default function DashboardF() {
             </CardHeader>
             <CardContent>
               <div className="h-64 flex items-center justify-center">
-                <div className="text-center">Chargement du graphique...</div>
+                <SectionLoader />
               </div>
             </CardContent>
           </Card>
@@ -311,7 +312,7 @@ export default function DashboardF() {
             </CardHeader>
             <CardContent>
               <div className="h-64 flex items-center justify-center">
-                <div className="text-center">Chargement du graphique...</div>
+                <SectionLoader />
               </div>
             </CardContent>
           </Card>
@@ -332,7 +333,7 @@ export default function DashboardF() {
             </CardHeader>
             <CardContent>
               <div className="h-64 flex items-center justify-center">
-                <div className="text-center">Chargement du graphique...</div>
+                <SectionLoader />
               </div>
             </CardContent>
           </Card>

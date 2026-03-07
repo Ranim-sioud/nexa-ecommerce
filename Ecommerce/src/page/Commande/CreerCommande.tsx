@@ -4,6 +4,7 @@ import { Client, Produit, ProduitCommande } from "../types/commande";
 import '../../styles/commande.css';
 import Swal from "sweetalert2";
 import api from "../../components/api";
+import { SectionLoader, Spinner } from "../../components/ui/Loader";
 
 const CreerCommande: React.FC = () => {
   const navigate = useNavigate();
@@ -545,16 +546,14 @@ const CreerCommande: React.FC = () => {
                 />
                 {loadingProduits && (
                   <div className="search-loading">
-                    <i className="fas fa-spinner fa-spin"></i>
+                    <Spinner size="sm" />
                   </div>
                 )}
               </div>
 
               <div className="product-list-container">
                 {loadingProduits ? (
-                  <div className="loading-message">
-                    <i className="fas fa-spinner fa-spin"></i> Chargement...
-                  </div>
+                  <SectionLoader />
                 ) : produitsDisponibles.length === 0 ? (
                   <div className="no-results-message">
                     {rechercheProduit ? (

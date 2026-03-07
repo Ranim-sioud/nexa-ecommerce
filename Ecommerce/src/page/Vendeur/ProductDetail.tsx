@@ -5,6 +5,7 @@ import {
   Card,
   CardContent,
 } from "../../components/ui/card";
+import { PageLoader } from "../../components/ui/Loader";
 import { Button } from "../../components/ui/button";
 import {
   ShoppingCart,
@@ -413,7 +414,7 @@ export default function ProductDetail() {
 
 
   if (loading) {
-    return <div className="text-center py-16">Chargement du produit...</div>;
+    return <PageLoader />;
   }
 
   if (!produit) {

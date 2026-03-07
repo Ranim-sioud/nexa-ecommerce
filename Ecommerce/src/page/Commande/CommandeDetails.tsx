@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import { PageLoader } from "../../components/ui/Loader";
 import { useParams } from "react-router-dom";
 import "../../styles/commande.css";
 import {
@@ -185,7 +186,7 @@ const CommandeDetails: React.FC = () => {
     };
   };
 
-  if (loading) return <div>Chargement...</div>;
+  if (loading) return <PageLoader />;
   if (!commande) return <div>Commande introuvable.</div>;
 
   const client = commande.client || {};

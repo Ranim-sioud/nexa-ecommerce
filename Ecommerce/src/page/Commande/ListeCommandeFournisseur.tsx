@@ -4,6 +4,7 @@ import { Link } from "react-router-dom";
 import {ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, FileDown, Filter, Printer, RotateCcw, Search } from "lucide-react";
 import Select from "react-select";
 import api from "../../components/api";
+import { SectionLoader } from "../../components/ui/Loader";
 
 // Types adaptés au nouveau backend
 type Client = {
@@ -1495,7 +1496,7 @@ const ListeCommandeFournisseur: React.FC = () => {
       {loading ? (
         <div className="loading-state">
           <div className="spinner"></div>
-          <p>Chargement des sous-commandes...</p>
+          <SectionLoader />
         </div>
       ) : filteredRows.length === 0 ? (
         <div className="empty-state">

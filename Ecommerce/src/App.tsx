@@ -2,6 +2,7 @@ import { Suspense, lazy } from "react";
 import { Routes, Route, Navigate, useNavigate } from "react-router-dom";
 import { ProductProvider } from "./components/ProductContext";
 import { DashboardLayout } from "./components/DashboardLayout";
+import { PageLoader } from "./components/ui/Loader";
 import axios from "axios";
 
 axios.defaults.withCredentials = true;
@@ -75,7 +76,7 @@ export default function App() {
   const navigate = useNavigate();
   return (
     <ProductProvider>
-      <Suspense fallback={<div className="p-6">Chargement...</div>}>
+      <Suspense fallback={<PageLoader />}>
       <Routes>
         {/* Public */}
         <Route path="/" element={<HomePage />} />

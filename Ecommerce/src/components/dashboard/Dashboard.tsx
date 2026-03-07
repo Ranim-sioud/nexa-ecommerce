@@ -5,6 +5,7 @@ import {
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
 import { Button } from "../ui/button";
+import { SectionLoader } from "../ui/Loader";
 
 // Composants réutilisables depuis DashboardF
 const TopProduits = lazy(() => import("../dashboard/TopProduits"));
@@ -101,7 +102,7 @@ export default function Dashboard() {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [showCalendar]);
 
-  if (loading) return <div className="py-10 text-center text-sm sm:text-base">Chargement du tableau de bord…</div>;
+  if (loading) return <SectionLoader />;
   if (!dashboardData || !dashboardData.cards) return <div className="py-10 text-center text-sm sm:text-base">Aucune donnée disponible</div>;
 
   const { cards, dailyData, monthlyData, topProduits, commandesParSource } = dashboardData;
@@ -277,7 +278,7 @@ export default function Dashboard() {
               <h3 className="text-lg sm:text-xl md:text-2xl font-bold">Mes produits les plus vendus</h3>
             </CardHeader>
             <CardContent className="flex items-center justify-center h-full">
-              <div className="text-center text-sm sm:text-base">Chargement...</div>
+              <SectionLoader />
             </CardContent>
           </Card>
         }>
@@ -304,7 +305,7 @@ export default function Dashboard() {
               <h3 className="text-lg sm:text-xl md:text-2xl font-bold">Taux de retour</h3>
             </CardHeader>
             <CardContent className="h-48 sm:h-64 flex items-center justify-center">
-              <div className="text-center text-sm sm:text-base">Chargement...</div>
+              <SectionLoader />
             </CardContent>
           </Card>
         }>
@@ -335,7 +336,7 @@ export default function Dashboard() {
               <h3 className="text-base sm:text-lg font-bold">Profits mensuels et commandes</h3>
             </CardHeader>
             <CardContent className="h-48 sm:h-64 flex items-center justify-center">
-              <div className="text-center text-sm sm:text-base">Chargement...</div>
+              <SectionLoader />
             </CardContent>
           </Card>
         }>
@@ -351,7 +352,7 @@ export default function Dashboard() {
               <h3 className="text-base sm:text-lg font-semibold">Profits quotidiens et commandes</h3>
             </CardHeader>
             <CardContent className="h-48 sm:h-64 flex items-center justify-center">
-              <div className="text-center text-sm sm:text-base">Chargement...</div>
+              <SectionLoader />
             </CardContent>
           </Card>
         }>

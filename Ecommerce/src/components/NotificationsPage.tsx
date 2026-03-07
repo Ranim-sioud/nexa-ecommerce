@@ -2,6 +2,7 @@ import { useNavigate } from 'react-router-dom';
 import { ShoppingCart, Bell, Trash2, X } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import api from './api';
+import { SectionLoader } from './ui/Loader';
 
 interface INotification {
   id: number;
@@ -83,7 +84,7 @@ export default function NotificationsPage() {
         {/* space-y-5 gère l'espace vertical ENTRE les cartes */}
         <div className="space-y-5"> 
           
-          {loading && <p className="text-center text-gray-500 py-10">Chargement...</p>}
+          {loading && <SectionLoader />}
           
           {!loading && notifications.length === 0 && (
             <div className="text-center py-20 bg-gray-50 rounded-2xl border border-dashed border-gray-300">

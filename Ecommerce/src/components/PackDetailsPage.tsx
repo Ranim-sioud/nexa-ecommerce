@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { SectionLoader } from './ui/Loader';
 import { Button } from './ui/button';
 import { Badge } from './ui/badge';
 import { 
@@ -580,7 +581,7 @@ export default function PackDetailsPage() {
             <Layout forceNavbarBackground={true}>
                 <div className="py-32 pt-40 pb-20 container mx-auto px-6 min-h-screen bg-theme-white flex items-center justify-center">
                     <div className="text-center">
-                        <div className="text-4xl font-black text-theme-primary mb-4">Chargement...</div>
+                        <SectionLoader />
                         <p className="text-theme-muted">Préparation des détails du pack</p>
                     </div>
                 </div>

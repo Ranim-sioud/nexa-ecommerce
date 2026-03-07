@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 // Ajout des icônes utilisées dans les composants
 import { Plus, Package, RefreshCw, Search, Tags, User, ListOrdered, Zap, ShoppingBag, Home, LayoutList, ChevronDown, Filter } from "lucide-react"; 
 import api from "../../components/api";
+import { SectionLoader } from "../../components/ui/Loader";
 
 // --- Typages ---
 interface User {
@@ -413,13 +414,7 @@ export default function Products() {
     // Rendu du composant
     // -------------------------------------------------------------
     if (loading) {
-        return (
-            <div className="flex justify-center items-center h-64">
-                <div className="animate-pulse text-lg text-gray-600">
-                    Chargement des produits...
-                </div>
-            </div>
-        );
+        return <SectionLoader />;
     }
     
     return (

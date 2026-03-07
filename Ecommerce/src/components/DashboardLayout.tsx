@@ -1,4 +1,5 @@
 import React, { useEffect, useState, Suspense, lazy, memo } from "react";
+import { PageLoader } from "./ui/Loader";
 import { Outlet, useNavigate } from "react-router-dom";
 import { SidebarProvider } from "./ui/sidebar";
 import { Toaster } from "./ui/sonner";
@@ -58,12 +59,7 @@ export function DashboardLayout() {
   fetchUser();
 }, [navigate]);
 
-  if (!user)
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        Chargement...
-      </div>
-    );
+  if (!user) return <PageLoader />;
 
   return (
     <SidebarProvider>
