@@ -11,14 +11,14 @@ import {
   getProductByIdSpecialist,
   createProductSpecialist
 } from "../controllers/specialistController.js";
-import { requireAuth } from "../middlewares/authMiddleware.js";
+import { requireAuth, requireRole } from "../middlewares/authMiddleware.js";
 import { requirePermission } from "../middlewares/permissionMiddleware.js";
 import { getProduitById } from "../controllers/produitController.js";
 import { upload } from "../middlewares/uploadCloudinary.js";
 import { deleteUser, updateUserStatus } from "../controllers/adminController.js";
 
 const router = express.Router();
-router.use(requireAuth);
+router.use(requireAuth, requireRole('specialiste', 'admin'));
 
 /**
  * @openapi

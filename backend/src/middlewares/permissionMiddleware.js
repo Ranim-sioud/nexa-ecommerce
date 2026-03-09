@@ -1,4 +1,5 @@
 import { Permission } from '../models/index.js';
+import logger from '../config/logger.js';
 
 // middlewares/permissionMiddleware.js
 export const requirePermission = (module, action = 'view') => {
@@ -56,7 +57,7 @@ export const requirePermission = (module, action = 'view') => {
       });
 
     } catch (error) {
-      console.error('Erreur vérification permission:', error);
+      logger.error('Erreur vérification permission:', { error: error.message, url: req.originalUrl });
       return res.status(500).json({ message: 'Erreur vérification des permissions' });
     }
   };

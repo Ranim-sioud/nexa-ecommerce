@@ -155,16 +155,18 @@ app.use((err, req, res, next) => {
   res.status(status).json({ message: status >= 500 ? 'Erreur serveur' : err.message });
 });
 
-// Verify DB connection on boot. Migrations are run by the Dockerfile CMD
-// before `npm start` (npx sequelize-cli db:migrate && npm start).
-(async () => {
-  try {
-    await sequelize.authenticate();
-    logger.info('Database connection established');
-  } catch (err) {
-    logger.error('Database connection failed', { error: err.message });
-    process.exit(1);
-  }
-})();
+// Verify DB connection on boot. Skipped in test environment (DB is mocked).
+// Migrations are run by the Dockerfile CMD before `npm start`.
+if (process.env.NODE_ENV !== 'test') {
+  (async () => {
+    try {
+      await sequelize.authenticate();
+      logger.info('Database connection established');
+    } catch (err) {
+      logger.error('Database connection failed', { error: err.message });
+      process.exit(1);
+    }
+  })();
+}
 
 export default app;

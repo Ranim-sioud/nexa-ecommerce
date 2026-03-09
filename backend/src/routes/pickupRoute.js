@@ -1,8 +1,9 @@
 import express from "express";
 import { listEnAttenteEnlevement, createPickup, listPickups, getPickupDetail } from "../controllers/pickupController.js";
-import { requireAuth } from "../middlewares/authMiddleware.js";
+import { requireAuth, requireRole } from "../middlewares/authMiddleware.js";
 
 const router = express.Router();
+router.use(requireAuth, requireRole('fournisseur', 'admin'));
 
 /**
  * @openapi
@@ -26,7 +27,7 @@ const router = express.Router();
  *           application/json:
  *             schema: { $ref: '#/components/schemas/Error' }
  */
-router.get("/en_attente_enlevement", requireAuth, listEnAttenteEnlevement);
+router.get("/en_attente_enlevement", listEnAttenteEnlevement);
 
 /**
  * @openapi
@@ -90,8 +91,8 @@ router.get("/en_attente_enlevement", requireAuth, listEnAttenteEnlevement);
  *           application/json:
  *             schema: { $ref: '#/components/schemas/Error' }
  */
-router.post("/", requireAuth, createPickup);
-router.get("/", requireAuth, listPickups);
+router.post("/", createPickup);
+router.get("/", listPickups);
 
 /**
  * @openapi
@@ -123,6 +124,6 @@ router.get("/", requireAuth, listPickups);
  *           application/json:
  *             schema: { $ref: '#/components/schemas/Error' }
  */
-router.get("/:id", requireAuth, getPickupDetail);
+router.get("/:id", getPickupDetail);
 
 export default router;

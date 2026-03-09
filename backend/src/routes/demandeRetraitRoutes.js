@@ -1,5 +1,5 @@
 import express from "express";
-import { requireAuth } from "../middlewares/authMiddleware.js";
+import { requireAuth, requireRole } from "../middlewares/authMiddleware.js";
 import {
   createDemande,
   listUserDemandes,
@@ -10,6 +10,7 @@ import {
 } from "../controllers/demandeRetraitController.js";
 
 const router = express.Router();
+router.use(requireAuth);
 
 /**
  * @openapi
@@ -63,8 +64,8 @@ const router = express.Router();
  *           application/json:
  *             schema: { $ref: '#/components/schemas/Error' }
  */
-router.post("/", requireAuth, createDemande);
-router.get("/", requireAuth, listUserDemandes);
+router.post("/", requireRole('vendeur'), createDemande);
+router.get("/", requireRole('vendeur'), listUserDemandes);
 
 /**
  * @openapi
@@ -92,7 +93,7 @@ router.get("/", requireAuth, listUserDemandes);
  *           application/json:
  *             schema: { $ref: '#/components/schemas/Error' }
  */
-router.get("/admin/all", requireAuth, listAllDemandes);
+router.get("/admin/all", requireRole('admin'), listAllDemandes);
 
 /**
  * @openapi
@@ -111,7 +112,7 @@ router.get("/admin/all", requireAuth, listAllDemandes);
  *           application/json:
  *             schema: { $ref: '#/components/schemas/Error' }
  */
-router.get("/transactions", requireAuth, getTransactions);
+router.get("/transactions", requireRole('vendeur', 'admin'), getTransactions);
 
 /**
  * @openapi
@@ -144,7 +145,7 @@ router.get("/transactions", requireAuth, getTransactions);
  *           application/json:
  *             schema: { $ref: '#/components/schemas/Error' }
  */
-router.patch("/:id/statut", requireAuth, updateStatut);
+router.patch("/:id/statut", requireRole('admin'), updateStatut);
 
 /**
  * @openapi
@@ -168,6 +169,6 @@ router.patch("/:id/statut", requireAuth, updateStatut);
  *           application/json:
  *             schema: { $ref: '#/components/schemas/Error' }
  */
-router.delete("/:id", requireAuth, deleteDemande);
+router.delete("/:id", requireRole('vendeur', 'admin'), deleteDemande);
 
 export default router;

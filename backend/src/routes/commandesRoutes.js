@@ -14,9 +14,10 @@ import {
   getTransactions,
   supprimerCommandes
 } from "../controllers/commandeController.js";
-import { requireAuth } from "../middlewares/authMiddleware.js";
+import { requireAuth, requireRole } from "../middlewares/authMiddleware.js";
 
 const router = express.Router();
+router.use(requireAuth);
 
 /**
  * @openapi
@@ -96,8 +97,8 @@ const router = express.Router();
  *           application/json:
  *             schema: { $ref: '#/components/schemas/Error' }
  */
-router.post("/", requireAuth, creerCommande);
-router.get("/", requireAuth, listerCommandesVendeur);
+router.post("/", requireRole('vendeur', 'admin'), creerCommande);
+router.get("/", requireRole('vendeur', 'admin'), listerCommandesVendeur);
 
 /**
  * @openapi
@@ -116,7 +117,7 @@ router.get("/", requireAuth, listerCommandesVendeur);
  *           application/json:
  *             schema: { $ref: '#/components/schemas/Error' }
  */
-router.get("/commandes", requireAuth, listerCommandesFournisseur);
+router.get("/commandes", requireRole('fournisseur', 'admin'), listerCommandesFournisseur);
 
 /**
  * @openapi
@@ -135,7 +136,7 @@ router.get("/commandes", requireAuth, listerCommandesFournisseur);
  *           application/json:
  *             schema: { $ref: '#/components/schemas/Error' }
  */
-router.get("/produits", requireAuth, obtenirProduitsVendeur);
+router.get("/produits", requireRole('vendeur', 'admin'), obtenirProduitsVendeur);
 
 /**
  * @openapi
@@ -177,7 +178,7 @@ router.get("/produits", requireAuth, obtenirProduitsVendeur);
  *           application/json:
  *             schema: { $ref: '#/components/schemas/Error' }
  */
-router.post("/frais", requireAuth, getFraisCommande);
+router.post("/frais", requireRole('vendeur', 'admin'), getFraisCommande);
 
 /**
  * @openapi
@@ -196,7 +197,7 @@ router.post("/frais", requireAuth, getFraisCommande);
  *           application/json:
  *             schema: { $ref: '#/components/schemas/Error' }
  */
-router.get("/transactions", requireAuth, getTransactions);
+router.get("/transactions", requireRole('vendeur', 'fournisseur', 'admin'), getTransactions);
 
 /**
  * @openapi
@@ -226,7 +227,7 @@ router.get("/transactions", requireAuth, getTransactions);
  *           application/json:
  *             schema: { $ref: '#/components/schemas/Error' }
  */
-router.post("/supprimer", requireAuth, supprimerCommandes);
+router.post("/supprimer", requireRole('vendeur', 'admin'), supprimerCommandes);
 
 /**
  * @openapi
@@ -251,7 +252,7 @@ router.post("/supprimer", requireAuth, supprimerCommandes);
  *           application/json:
  *             schema: { $ref: '#/components/schemas/Error' }
  */
-router.get("/fournisseur/:id", requireAuth, obtenirDetailsCommandeFournisseur);
+router.get("/fournisseur/:id", requireRole('fournisseur', 'admin'), obtenirDetailsCommandeFournisseur);
 
 /**
  * @openapi
@@ -280,7 +281,7 @@ router.get("/fournisseur/:id", requireAuth, obtenirDetailsCommandeFournisseur);
  *           application/json:
  *             schema: { $ref: '#/components/schemas/Error' }
  */
-router.get("/email/:email", requireAuth, getClientByEmail);
+router.get("/email/:email", requireRole('vendeur', 'admin'), getClientByEmail);
 
 /**
  * @openapi
@@ -339,8 +340,8 @@ router.get("/email/:email", requireAuth, getClientByEmail);
  *           application/json:
  *             schema: { $ref: '#/components/schemas/Error' }
  */
-router.get("/:id", requireAuth, obtenirDetailsCommande);
-router.put("/:id", requireAuth, modifierCommande);
+router.get("/:id", requireRole('vendeur', 'fournisseur', 'admin'), obtenirDetailsCommande);
+router.put("/:id", requireRole('vendeur', 'admin'), modifierCommande);
 
 /**
  * @openapi
@@ -374,6 +375,6 @@ router.put("/:id", requireAuth, modifierCommande);
  *           application/json:
  *             schema: { $ref: '#/components/schemas/Error' }
  */
-router.put("/sous-commande/:id/tracking", requireAuth, mettreAJourTracking);
+router.put("/sous-commande/:id/tracking", requireRole('fournisseur', 'admin'), mettreAJourTracking);
 
 export default router;

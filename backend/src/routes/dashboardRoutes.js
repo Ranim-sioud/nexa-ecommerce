@@ -1,7 +1,8 @@
 import express from "express";
 import { getDashboardStats } from "../controllers/dashboardController.js";
-import { requireAuth } from "../middlewares/authMiddleware.js";
+import { requireAuth, requireRole } from "../middlewares/authMiddleware.js";
 const router = express.Router();
+router.use(requireAuth, requireRole('vendeur', 'admin'));
 
 /**
  * @openapi
@@ -29,6 +30,6 @@ const router = express.Router();
  *           application/json:
  *             schema: { $ref: '#/components/schemas/Error' }
  */
-router.get("/", requireAuth, getDashboardStats);
+router.get("/", getDashboardStats);
 
 export default router;

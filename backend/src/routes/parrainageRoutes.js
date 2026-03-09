@@ -4,8 +4,10 @@ import {
   getBonusParVendeur,
   getParrainagesByVendeur,
 } from "../controllers/parrainageController.js";
+import { requireAuth, requireRole } from "../middlewares/authMiddleware.js";
 
 const router = express.Router();
+router.use(requireAuth);
 
 /**
  * @openapi
@@ -13,6 +15,8 @@ const router = express.Router();
  *   get:
  *     tags: [Parrainage]
  *     summary: List all referrals (Admin)
+ *     security:
+ *       - cookieAuth: []
  *     responses:
  *       200:
  *         description: Array of all parrainage records
@@ -21,8 +25,12 @@ const router = express.Router();
  *             schema:
  *               type: array
  *               items: { $ref: '#/components/schemas/Parrainage' }
+ *       401:
+ *         description: Unauthorized
+ *       403:
+ *         description: Forbidden
  */
-router.get("/", getAllParrainages);
+router.get("/", requireRole('admin'), getAllParrainages);
 
 /**
  * @openapi
@@ -30,6 +38,8 @@ router.get("/", getAllParrainages);
  *   get:
  *     tags: [Parrainage]
  *     summary: Get referrals for a specific Vendeur
+ *     security:
+ *       - cookieAuth: []
  *     parameters:
  *       - in: path
  *         name: id
@@ -44,8 +54,12 @@ router.get("/", getAllParrainages);
  *             schema:
  *               type: array
  *               items: { $ref: '#/components/schemas/Parrainage' }
+ *       401:
+ *         description: Unauthorized
+ *       403:
+ *         description: Forbidden
  */
-router.get("/vendeur/:id", getParrainagesByVendeur);
+router.get("/vendeur/:id", requireRole('vendeur', 'admin'), getParrainagesByVendeur);
 
 /**
  * @openapi
@@ -53,6 +67,8 @@ router.get("/vendeur/:id", getParrainagesByVendeur);
  *   get:
  *     tags: [Parrainage]
  *     summary: Get total referral bonus credited per Vendeur
+ *     security:
+ *       - cookieAuth: []
  *     responses:
  *       200:
  *         description: Bonus totals grouped by vendeur
@@ -65,7 +81,11 @@ router.get("/vendeur/:id", getParrainagesByVendeur);
  *                 properties:
  *                   vendeur_id: { type: integer }
  *                   total_bonus:{ type: number }
+ *       401:
+ *         description: Unauthorized
+ *       403:
+ *         description: Forbidden
  */
-router.get("/bonus-par-vendeur", getBonusParVendeur);
+router.get("/bonus-par-vendeur", requireRole('admin'), getBonusParVendeur);
 
 export default router;

@@ -38,3 +38,29 @@ export function requireAdmin(req, res, next) {
   }
   next();
 }
+
+/**
+ * Role-based access guard. Accepts one or more allowed roles.
+ * Must be used AFTER requireAuth (req.user must be populated).
+ *
+ * @param {...string} roles - Allowed roles (e.g. 'vendeur', 'admin')
+ * @example router.get('/orders', requireAuth, requireRole('vendeur', 'admin'), handler)
+ */
+export function requireRole(...roles) {
+  return function (req, res, next) {
+    if (!req.user) {
+      logger.warn('Role check failed: no user', { ip: req.ip, url: req.originalUrl });
+      return res.status(401).json({ message: "Non authentifié" });
+    }
+    if (!roles.includes(req.user.role)) {
+      logger.warn('Role check failed: insufficient role', {
+        userId: req.user.id,
+        role: req.user.role,
+        required: roles,
+        url: req.originalUrl,
+      });
+      return res.status(403).json({ message: "Accès refusé" });
+    }
+    next();
+  };
+}
