@@ -255,7 +255,7 @@ export async function login(req, res) {
   res.cookie("accessToken", accessToken, {
     httpOnly: true,                    // Empêche l'accès via JavaScript (protection XSS)
     secure: process.env.NODE_ENV === "production", // Seulement en HTTPS en prod
-    sameSite: "strict",                // Protection CSRF
+    sameSite: "lax",                   // "lax" allows cookies on top-level navigations (e.g. login redirect)
     maxAge: 4 * 60 * 60 * 1000,        // 4 heures
   });
 
@@ -263,7 +263,7 @@ export async function login(req, res) {
   res.cookie("refreshToken", rawRefreshToken, {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
-    sameSite: "strict",
+    sameSite: "lax",
     maxAge: 30 * 24 * 60 * 60 * 1000, // 30 jours
   });
 
@@ -316,14 +316,14 @@ export async function refresh(req, res) {
     res.cookie("accessToken", newAccessToken, {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
-      sameSite: "strict",
+      sameSite: "lax",
       maxAge: 4 * 60 * 60 * 1000,
     });
 
     res.cookie("refreshToken", newRawRefreshToken, {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
-      sameSite: "strict",
+      sameSite: "lax",
       maxAge: 30 * 24 * 60 * 60 * 1000,
     });
 

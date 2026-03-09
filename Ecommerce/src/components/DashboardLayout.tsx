@@ -1,4 +1,4 @@
-import { useState, Suspense, lazy, memo } from "react";
+import { useState, Suspense, lazy, memo, useEffect } from "react";
 import { PageLoader } from "./ui/Loader";
 import { Outlet, useNavigate } from "react-router-dom";
 import { SidebarProvider } from "./ui/sidebar";
@@ -14,18 +14,20 @@ const Navbar = memo(RawNavbar);
 
 export function DashboardLayout() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-  const { user, isLoading, logout } = useAuth();
+  const { user, isLoading, isFetching, logout } = useAuth();
   const navigate = useNavigate();
 
-  // Show loader while the /users/me query is in flight
-  if (isLoading) return <PageLoader />;
+  // Not authenticated → redirect (moved to useEffect to avoid navigate-in-render warning)
+  useEffect(() => {
+    if (!isLoading && !isFetching && !user) {
+      navigate("/auth/login", { replace: true });
+    }
+  }, [user, isLoading, isFetching, navigate]);
 
-  // Not authenticated → redirect (ProtectedRoute handles this for role routes,
-  // but this catches any dashboard child without a ProtectedRoute wrapper)
-  if (!user) {
-    navigate("/auth/login", { replace: true });
-    return null;
-  }
+  // Show loader while the /users/me query is in flight
+  if (isLoading || isFetching) return <PageLoader />;
+
+  if (!user) return null;
 
   return (
     <SidebarProvider>

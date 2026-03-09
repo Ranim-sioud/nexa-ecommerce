@@ -29,6 +29,7 @@ export interface AuthUser {
 interface AuthContextValue {
   user: AuthUser | null;
   isLoading: boolean;
+  isFetching: boolean;
   logout: () => Promise<void>;
 }
 
@@ -41,7 +42,7 @@ const AuthContext = createContext<AuthContextValue | null>(null);
 export function AuthProvider({ children }: { children: ReactNode }) {
   const queryClient = useQueryClient();
 
-  const { data: user = null, isLoading } = useQuery<AuthUser | null>({
+  const { data: user = null, isLoading, isFetching } = useQuery<AuthUser | null>({
     queryKey: ['me'],
     queryFn: async () => {
       try {
@@ -65,7 +66,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, isLoading, logout }}>
+    <AuthContext.Provider value={{ user, isLoading, isFetching, logout }}>
       {children}
     </AuthContext.Provider>
   );

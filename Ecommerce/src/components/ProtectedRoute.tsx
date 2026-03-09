@@ -24,9 +24,9 @@ interface ProtectedRouteProps {
 }
 
 export function ProtectedRoute({ roles }: ProtectedRouteProps) {
-  const { user, isLoading } = useAuth();
+  const { user, isLoading, isFetching } = useAuth();
 
-  if (isLoading) return <PageLoader />;
+  if (isLoading || isFetching) return <PageLoader />;
 
   if (!user) return <Navigate to="/auth/login" replace />;
 

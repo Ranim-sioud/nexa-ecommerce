@@ -5,6 +5,7 @@ import { Input } from "./ui/input";
 import { Label } from "./ui/label";
 import { Card } from "./ui/card";
 import { useNavigate } from "react-router-dom";
+import { useQueryClient } from "@tanstack/react-query";
 import {Layout} from "./HomePage";
 import Swal from "sweetalert2";
 import api from "./api";
@@ -16,6 +17,7 @@ export default function Login() {
     mot_de_passe: "",
   });
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
 
   const handleInputChange = (field, value) => {
     setFormData((prev) => ({
@@ -49,6 +51,10 @@ export default function Login() {
         text: "Bienvenue " + res.data.user.nom,
         confirmButtonColor: "#0d9488",
       });
+
+      // Reset the ['me'] query so TanStack Query refetches with the new session cookie
+      // (avoids stale error-state from the pre-login /users/me 401)
+      await queryClient.resetQueries({ queryKey: ["me"] });
 
       // Redirection selon le rôle
       if (res.data.user.role === "vendeur") navigate("/dashboard");
