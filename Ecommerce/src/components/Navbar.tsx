@@ -12,7 +12,8 @@ import {
   ChevronDown,
   Settings as SettingsIcon,
   Coins,
-  Wallet
+  Wallet,
+  LogOut,
 } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useProducts } from "./ProductContext";
@@ -31,7 +32,7 @@ import axios from "axios";
 import { useTranslation } from "react-i18next";
 import { useLanguage } from "../context/LanguageContext";
 import logo from '../assets/logo.png';
-import { logout } from './utils/auth';
+import { useAuth, ROLE_META, UserRole } from '../context/AuthContext';
 import api from "./api";
 
 // Utilitaire pour combiner les classes CSS
@@ -158,9 +159,6 @@ const handleNotificationClick = (notification: INotification) => {
   };
   
 
-  const handleLogout = async () => {
-    await logout();
-  };
 
   return (
     <header className="sticky top-0 z-50 w-full bg-background border-b border-border shadow-sm">
@@ -284,7 +282,7 @@ const handleNotificationClick = (notification: INotification) => {
 
           {/* User Menu */}
           {currentUser && (
-            <UserMenu user={currentUser} onSettings={() => navigate("/settings")} onLogout={logout} />
+            <UserMenu user={currentUser} onSettings={() => navigate("/settings")} />
           )}
         </div>
       </div>
@@ -318,24 +316,24 @@ const handleNotificationClick = (notification: INotification) => {
 }
 
 /* ------------------------------------------------------------------ */
-/* UserMenu : simple dropdown contrôlé par l'app (no Radix)            */
+/* UserMenu — role-aware badge + logout sub-menu (Sub-Sprint 5)        */
 /* ------------------------------------------------------------------ */
 function UserMenu({
   user,
   onSettings,
-  onLogout,
 }: {
   user: { nom: string; email: string; role?: string } | null;
   onSettings: () => void;
-  onLogout: () => void;
 }) {
   const [open, setOpen] = useState(false);
   const triggerRef = useRef<HTMLButtonElement | null>(null);
   const menuRef = useRef<HTMLDivElement | null>(null);
   const navigate = useNavigate();
-
+  const { logout: authLogout } = useAuth();
   const { t } = useTranslation();
-  const { language, changeLanguage } = useLanguage();
+
+  const role = user?.role as UserRole | undefined;
+  const roleMeta = role && ROLE_META[role] ? ROLE_META[role] : null;
 
   useEffect(() => {
     function onDocClick(e: MouseEvent) {
@@ -356,61 +354,102 @@ function UserMenu({
   }, []);
 
   const handleLogoutClick = async () => {
-    await logout();
-    setOpen(false); // fermer le menu
+    setOpen(false);
+    await authLogout();
   };
 
   return (
     <div className="relative">
+      {/* ── Trigger ─────────────────────────────────────────────────── */}
       <button
         ref={triggerRef}
         onClick={() => setOpen((v) => !v)}
         aria-expanded={open}
         aria-haspopup="menu"
-        className="flex items-center gap-2 p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+        className="flex items-center gap-2 px-2 py-1.5 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
         type="button"
       >
-        <div className="w-8 h-8 bg-gradient-to-r from-teal-600 to-teal-400 rounded-full flex items-center justify-center">
-          <span className="text-white font-medium text-xs">
+        {/* Avatar */}
+        <div className="w-8 h-8 bg-gradient-to-br from-teal-500 to-teal-700 rounded-full flex items-center justify-center shrink-0 shadow-sm">
+          <span className="text-white font-semibold text-xs">
             {user?.nom ? user.nom.charAt(0).toUpperCase() : "U"}
           </span>
         </div>
-        <span className="text-sm text-muted-foreground hidden md:block">{user?.nom ?? "Utilisateur"}</span>
-        <ChevronDown className="h-3 w-3 text-muted-foreground hidden md:block" />
+
+        {/* Name + role pill (desktop only) */}
+        <div className="hidden md:flex flex-col items-start leading-none gap-0.5">
+          <span className="text-sm font-medium text-gray-800 dark:text-gray-100">
+            {user?.nom ?? "Utilisateur"}
+          </span>
+          {roleMeta && (
+            <span
+              className={cn(
+                "text-[10px] font-semibold px-1.5 py-0.5 rounded-full border",
+                roleMeta.classes
+              )}
+            >
+              {roleMeta.label}
+            </span>
+          )}
+        </div>
+
+        <ChevronDown
+          className={cn(
+            "h-3 w-3 text-muted-foreground hidden md:block transition-transform duration-200",
+            open && "rotate-180"
+          )}
+        />
       </button>
 
+      {/* ── Dropdown ────────────────────────────────────────────────── */}
       {open && (
         <div
           ref={menuRef}
-          className="absolute right-0 mt-2 w-56 z-50 rounded-lg border bg-white text-gray-900 shadow-lg dark:bg-gray-800 dark:text-white dark:border-gray-700 overflow-hidden"
+          role="menu"
+          className="absolute right-0 mt-2 w-60 z-50 rounded-xl border bg-white text-gray-900 shadow-xl dark:bg-gray-800 dark:text-white dark:border-gray-700 overflow-hidden"
         >
-          <div className="px-4 py-3 border-b border-gray-100 dark:border-gray-700">
-            <p className="text-sm font-medium">{user?.nom ?? "Utilisateur"}</p>
-            <p className="text-xs text-muted-foreground">{user?.email ?? "email@exemple"}</p>
-            {user?.role && (
-              <div className="mt-1">
-                <Badge variant="outline" className="text-xs">
-                  {user.role}
-                </Badge>
-              </div>
-            )}
+          {/* Header: avatar + identity + role badge */}
+          <div className="flex items-center gap-3 px-4 py-3 border-b border-gray-100 dark:border-gray-700">
+            <div className="w-10 h-10 bg-gradient-to-br from-teal-500 to-teal-700 rounded-full flex items-center justify-center shrink-0 shadow-sm">
+              <span className="text-white font-bold text-sm">
+                {user?.nom ? user.nom.charAt(0).toUpperCase() : "U"}
+              </span>
+            </div>
+            <div className="min-w-0">
+              <p className="text-sm font-semibold truncate">{user?.nom ?? "Utilisateur"}</p>
+              <p className="text-xs text-muted-foreground truncate">{user?.email ?? ""}</p>
+              {roleMeta && (
+                <span
+                  className={cn(
+                    "inline-block mt-1 text-[10px] font-semibold px-2 py-0.5 rounded-full border",
+                    roleMeta.classes
+                  )}
+                >
+                  {roleMeta.label}
+                </span>
+              )}
+            </div>
           </div>
-          <div className="p-2">
+
+          {/* Actions */}
+          <div className="p-1.5">
             <button
-              onClick={() => {
-                setOpen(false);
-                onSettings();
-              }}
-              className="w-full text-left px-3 py-2 text-sm rounded-md hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors flex items-center"
+              role="menuitem"
+              onClick={() => { setOpen(false); onSettings(); }}
+              className="w-full text-left px-3 py-2 text-sm rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors flex items-center gap-2"
             >
-              <SettingsIcon className="h-4 w-4 mr-2" />
+              <SettingsIcon className="h-4 w-4 text-gray-500" />
               {t("Paramètres")}
             </button>
+
+            <div className="my-1 border-t border-gray-100 dark:border-gray-700" />
+
             <button
+              role="menuitem"
               onClick={handleLogoutClick}
-              className="w-full text-left px-3 py-2 text-sm rounded-md hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors flex items-center text-red-600 dark:text-red-400"
+              className="w-full text-left px-3 py-2 text-sm rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors flex items-center gap-2 text-red-600 dark:text-red-400"
             >
-              <X className="h-4 w-4 mr-2" />
+              <LogOut className="h-4 w-4" />
               {t("logout")}
             </button>
           </div>
