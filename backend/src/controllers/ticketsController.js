@@ -179,7 +179,7 @@ export async function updateTicketStatus(req, res) {
 
     res.json({ message: "Statut mis à jour", ticket });
   } catch (err) {
-    logger.error(err);
+    //logger.error(err.message);  
     res.status(500).json({ message: "Erreur mise à jour statut" });
   }
 }

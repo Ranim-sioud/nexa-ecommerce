@@ -49,9 +49,9 @@ const getStatusBadge = (status) => {
         case "ouvert":
             // Vert clair raffiné
             return <Badge className="bg-teal-50 text-teal-400 font-semibold text-xs py-0.5 px-2">Ouvert</Badge>;
-        case "fermé":
+        case "ferme":
             return <Badge className="bg-red-100 text-red-400 font-semibold text-xs py-0.5 px-2">Fermé</Badge>;
-        case "en_cours":
+        case "en_attente":
             return <Badge className="bg-yellow-100 text-yellow-700">En cours</Badge>;
         default:
             return <Badge variant="secondary">{status}</Badge>;
@@ -386,7 +386,7 @@ export default function TicketDetails() {
                             <Button
                               size="sm"
                               variant="outline"
-                              onClick={() => changeStatus("en_cours")}
+                              onClick={() => changeStatus("en_attente")}
                               className="h-7 px-3 text-xs border-yellow-700 text-yellow-700 hover:bg-yellow-100"
                             >
                               En cours
@@ -395,7 +395,7 @@ export default function TicketDetails() {
                             <Button
                               size="sm"
                               variant="outline"
-                              onClick={() => changeStatus("fermé")}
+                              onClick={() => changeStatus("ferme")}
                               className="h-7 px-3 text-xs border border-red-400 text-red-500 hover:bg-red-100"
                             >
                               Fermer

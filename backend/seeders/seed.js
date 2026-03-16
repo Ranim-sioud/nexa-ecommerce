@@ -1,6 +1,8 @@
 import sequelize from "../src/config/database.js";
 import Fournisseur from "../src/models/Fournisseur.js";
 import User from "../src/models/User.js";
+import Pack from "../src/models/Pack.js";
+import Categorie from "../src/models/Categorie.js";
 import TicketsType from "../src/models/TicketsType.js";
 import argon2 from 'argon2';
 import dotenv from "dotenv";
@@ -81,7 +83,44 @@ async function seed() {
       await TicketsType.findOrCreate({ where: { name: tt.name }, defaults: tt });
     }
 
-    console.log("Seed complete — specialists, admin, and ticket types are present.");
+    const packs = [
+      { cle: 'origin',     titre: 'Origin',     prix: 0.00,    description: 'Pack Origin' },
+      { cle: 'elevation',  titre: 'Elevation',  prix: 490.00, description: 'Pack Elevation' },
+      { cle: 'prestige',   titre: 'Prestige',   prix: 970.00, description: 'Pack Prestige' },
+      { cle: 'legacy',     titre: 'Legacy',     prix: 1330.00, description: 'Pack Legacy' },
+    ];
+    
+    for (const p of packs) {
+      await Pack.findOrCreate({
+        where: { cle: p.cle },
+        defaults: p,
+      });
+    }
+
+    const categories = [
+      { nom: "Meubles", parent_id: null },
+      { nom: "Électronique", parent_id: null },
+      { nom: "Mode", parent_id: null },
+      { nom: "Beauté", parent_id: null },
+      { nom: "Sports", parent_id: null },
+      { nom: "Jouets", parent_id: null },
+      { nom: "Bijoux", parent_id: null },
+      { nom: "Jardinage", parent_id: null },
+      { nom: "Cuisine", parent_id: null },
+      { nom: "Décoration", parent_id: null },
+      { nom: "Electroménagers", parent_id: null },
+      { nom: "Accessoire", parent_id: null },
+      { nom: "Auto", parent_id: null },
+    ];
+    
+    for (const c of categories) {
+      await Categorie.findOrCreate({
+        where: { nom: c.nom },
+        defaults: c,
+      });
+    }
+    
+    console.log("Seed complete — specialists, admin, ticket types, packs, , and categories are present.");
     process.exit(0);
   } catch (err) {
     console.error("Seed error:", err);

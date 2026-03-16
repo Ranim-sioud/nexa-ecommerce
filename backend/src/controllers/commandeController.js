@@ -576,7 +576,7 @@ export const obtenirDetailsCommande = async (req, res) => {
     if (!commande) {
       return res.status(404).json({ message: "Commande non trouvée" });
     }
-    logger.info("Commande ::", commande)
+    logger.info(`Commande récupérée ${commande.id}`);
     res.json(commande);
   } catch (error) { 
     logger.error("Erreur détails commande:", error);
