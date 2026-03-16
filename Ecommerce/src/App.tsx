@@ -134,7 +134,6 @@ export default function App() {
             <Route path="/commande/:id" element={<CommandeDetails />} />
             <Route path="/MesProduits" element={<MesProduits />} />
             <Route path="/products" element={<MyProducts />} />
-            <Route path="/transaction" element={<Transactions />} />
             <Route path="/VendeurParrainage" element={<VendeurParrainagePage />} />
           </Route>
 
@@ -145,6 +144,11 @@ export default function App() {
             <Route path="/CommandeDetailsFournisseur/:id" element={<CommandeDetailsFournisseur />} />
             <Route path="/pickup" element={<PickupPage />} />
             <Route path="/ProductList" element={<ProductList />} />
+          </Route>
+
+          {/* Route unique pour Transactions avec tous les rôles concernés */}
+          <Route element={<ProtectedRoute roles={['vendeur', 'fournisseur', 'admin']} />}>
+            <Route path="/transaction" element={<Transactions />} />
           </Route>
 
         </Route>

@@ -326,7 +326,7 @@ export default function AddProduct({ produit, onCancel, onSaved }: AddProductPro
     setIsSubmitting(true);
     try {
       const formData = new FormData();
-      const API_BASE = "http://localhost:4001";
+      const API_BASE = import.meta.env.VITE_API_URL ?? "http://localhost:4001/api";
 
       // Ajout des champs généraux
       Object.keys(form).forEach((key) => {
@@ -386,8 +386,8 @@ export default function AddProduct({ produit, onCancel, onSaved }: AddProductPro
         }
       }
       const url = produit
-        ? `${API_BASE}/api/produits/${produit.id}`
-        : `${API_BASE}/api/produits`;
+        ? `${API_BASE}/produits/${produit.id}`
+        : `${API_BASE}/produits`;
       const method = produit ? "put" : "post";
       await axios[method](url, formData, {
         headers: {

@@ -42,6 +42,7 @@ const menuItems = {
     { title: "Commandes", icon: ShoppingBag, path: "/ListeCommandeFournisseur" },
     { title: "Pickups", icon: Truck, path: "/pickup" },
     { title: "Utilisateurs", icon: Users, path: "/adminUsers" },
+    { title: "Transactions", icon: Users, path: "/demandeRetrait" },
     { title: "Parrainage", icon: Users, path: "/AdminParrainage" },
     { title: "Spécialistes", icon: Shield, path: "/admin/specialists" },
     { title: "Permissions", icon: Key, path: "/admin/permissions" },

@@ -1,6 +1,6 @@
 import axios from "axios";
 
-export const API_BASE = "http://localhost:4001/api";
+export const API_BASE = import.meta.env.VITE_API_URL ?? "http://localhost:4001/api";
 
 export async function get(path: string, token?: string) {
   const t = token || localStorage.getItem("accessToken");
