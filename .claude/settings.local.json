@@ -3,7 +3,27 @@
     "allow": [
       "Bash(sshpass:*)",
       "Bash(wsl ssh:*)",
-      "Bash(wsl:*)"
+      "Bash(wsl:*)",
+      "Bash(for f in D:/51_Smartec_Deployment_VPS/nexa-ecommerce/backend/src/models/*.js)",
+      "Bash(do echo \"=== $f ===\")",
+      "Read(//d/51_Smartec_Deployment_VPS/nexa-ecommerce/**)",
+      "Bash(done)",
+      "Bash(npm install:*)",
+      "Bash(for m in Vendeur Pack Commande Produit Tickets DemandeRetrait)",
+      "Bash(do)",
+      "Bash(echo \"=== $m ===\")",
+      "Read(//d/51_Smartec_Deployment_VPS/nexa-ecommerce/backend/src/models/**)",
+      "Bash(ssh:*)",
+      "Bash(npm test:*)",
+      "Bash(npx tsc:*)",
+      "Bash(npm run:*)",
+      "Bash(wsl.exe:*)",
+      "Bash(wsl psql:*)",
+      "Bash(cmd:*)",
+      "Bash(powershell:*)",
+      "Bash(docker:*)",
+      "Bash(\"/c/Program Files/PostgreSQL/15/bin/pg_restore\":*)",
+      "Bash(git:*)"
     ]
   }
 }
