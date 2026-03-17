@@ -36,7 +36,10 @@ app.use(helmet({
   contentSecurityPolicy: {
     directives: {
       defaultSrc: ["'self'"],
-      imgSrc: ["'self'", "data:", "http://localhost:4001", "blob:", "*.cloudinary.com"],
+      imgSrc: [
+        "'self'", "data:", "blob:", "*.cloudinary.com",
+        ...(process.env.NODE_ENV !== 'production' ? ["http://localhost:4001"] : []),
+      ],
       scriptSrc: ["'self'"],
       // adapter selon besoin
     }
@@ -49,11 +52,9 @@ app.use(compression());
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
-const FRONTEND_URL = process.env.FRONTEND_URL || "http://localhost:3000";
-//app.use(cors({ origin: FRONTEND_URL, credentials: true }));
 const allowedOrigins = [
-  "http://localhost:3000",
-  process.env.FRONTEND_URL
+  process.env.FRONTEND_URL,
+  ...(process.env.NODE_ENV !== 'production' ? ['http://localhost:3000'] : []),
 ].filter(Boolean);
 
 app.use(cors({

@@ -1,6 +1,6 @@
 import express from "express";
 import { createTickets, listTickets, getTicketsDetail, postMessage, getAllTicketTypes, updateTicketStatus } from "../controllers/ticketsController.js";
-import { requireAuth } from "../middlewares/authMiddleware.js";
+import { requireAuth, requireRole } from "../middlewares/authMiddleware.js";
 const router = express.Router();
 
 /**
@@ -184,6 +184,6 @@ router.post("/:ticketId/messages", requireAuth, postMessage);
  *           application/json:
  *             schema: { $ref: '#/components/schemas/Error' }
  */
-router.post("/tickets/:id/status", requireAuth, updateTicketStatus);
+router.post("/tickets/:id/status", requireAuth, requireRole('admin', 'specialiste'), updateTicketStatus);
 
 export default router;

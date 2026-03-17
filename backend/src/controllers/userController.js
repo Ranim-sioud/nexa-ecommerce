@@ -11,9 +11,9 @@ import { CloudinaryStorage } from "multer-storage-cloudinary";
 
 // 🔹 Config Cloudinary
 cloudinary.config({
-  cloud_name: process.env.CLOUDINARY_NAME,
-  api_key: process.env.CLOUDINARY_KEY,
-  api_secret: process.env.CLOUDINARY_SECRET,
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+  api_key: process.env.CLOUDINARY_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET,
 });
 
 const __filename = fileURLToPath(import.meta.url);
@@ -134,13 +134,6 @@ export async function updateMe(req, res) {
   }
 }
 
-cloudinary.config({
-  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
-  api_key: process.env.CLOUDINARY_API_KEY,
-  api_secret: process.env.CLOUDINARY_API_SECRET,
-});
-
-
 // 🔹 Route Upload Photo
 export async function uploadProfileImage(req, res) {
   try {
@@ -152,7 +145,8 @@ export async function uploadProfileImage(req, res) {
       return res.status(400).json({ message: "Aucun fichier envoyé" });
     }
 
-    user.image_url = `http://localhost:4001/uploads/${req.file.filename}`;
+    const baseUrl = process.env.FRONTEND_URL || 'http://localhost:4001';
+    user.image_url = `${baseUrl}/uploads/${req.file.filename}`;
     await user.save();
 
     res.json({ message: "Image mise à jour ✅", profileImage: user.image_url });

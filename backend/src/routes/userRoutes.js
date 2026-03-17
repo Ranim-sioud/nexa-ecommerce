@@ -1,5 +1,5 @@
 import express from "express";
-import {requireAuth} from "../middlewares/authMiddleware.js";
+import { requireAuth, requireAdmin } from "../middlewares/authMiddleware.js";
 import { getProfile, updateProfile, uploadProfileImage, upload, getMe, updateMe, getFournisseurs, getSoldeVendeur, getSoldeUtilisateur, demanderChangementPack, getMesDemandesPack, getDemandesPackEnAttente, annulerDemandePack } from "../controllers/userController.js";
 
 const router = express.Router();
@@ -271,7 +271,7 @@ router.get('/mes-demandes', requireAuth, getMesDemandesPack);
  *           application/json:
  *             schema: { $ref: '#/components/schemas/Error' }
  */
-router.get('/demandes/en-attente', requireAuth, getDemandesPackEnAttente);
+router.get('/demandes/en-attente', requireAuth, requireAdmin, getDemandesPackEnAttente);
 
 /**
  * @openapi

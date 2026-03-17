@@ -1,4 +1,5 @@
 import axios from "axios";
+import queryClient from "../lib/queryClient";
 
 const api = axios.create({
   baseURL: import.meta.env.VITE_API_URL ?? "http://localhost:4001/api",
@@ -36,9 +37,9 @@ api.interceptors.response.use(
       } catch (refreshError) {
         console.error("Échec du rafraîchissement:", refreshError);
         
-        // Nettoyer localStorage
-        localStorage.removeItem("user");
-        
+        // Clear TanStack Query auth cache so stale user data isn't shown
+        queryClient.removeQueries({ queryKey: ['me'] });
+
         // Rediriger vers login seulement si on n'y est pas déjà
         if (!window.location.pathname.includes('/auth/login')) {
           window.location.href = '/auth/login';

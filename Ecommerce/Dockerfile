@@ -5,7 +5,7 @@ RUN npm ci
 COPY . .
 # VITE_API_URL is baked into the static bundle at build time.
 # Pass it via: docker build --build-arg VITE_API_URL=https://nexa-tn.com/api
-ARG VITE_API_URL=http://localhost:4001/api
+ARG VITE_API_URL
 ENV VITE_API_URL=$VITE_API_URL
 RUN npm run build
 

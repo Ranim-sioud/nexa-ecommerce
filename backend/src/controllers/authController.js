@@ -23,7 +23,7 @@ const transporter = nodemailer.createTransport({
 });
 
 export async function sendActivationEmail(user, token) {
-  const activationLink = `${process.env.BACKEND_URL}/api/auth/activate?token=${token}`;
+  const activationLink = `${process.env.FRONTEND_URL}/api/auth/activate?token=${token}`;
 
   await transporter.sendMail({
     from: `"Nexa App" <${process.env.MAIL_USER}>`,
@@ -252,18 +252,18 @@ export async function login(req, res) {
     { where: { id: user.id } }
   );
 
+  const isProd = process.env.NODE_ENV === "production";
   res.cookie("accessToken", accessToken, {
-    httpOnly: true,                    // Empêche l'accès via JavaScript (protection XSS)
-    secure: process.env.NODE_ENV === "production", // Seulement en HTTPS en prod
-    sameSite: "lax",                   // "lax" allows cookies on top-level navigations (e.g. login redirect)
+    httpOnly: true,
+    secure: isProd,
+    sameSite: isProd ? "strict" : "lax",
     maxAge: 4 * 60 * 60 * 1000,        // 4 heures
   });
 
-  // Envoyer en cookie sécurisé HttpOnly
   res.cookie("refreshToken", rawRefreshToken, {
     httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
-    sameSite: "lax",
+    secure: isProd,
+    sameSite: isProd ? "strict" : "lax",
     maxAge: 30 * 24 * 60 * 60 * 1000, // 30 jours
   });
 
@@ -313,17 +313,18 @@ export async function refresh(req, res) {
     );
 
     // --- Envoyer cookies sécurisés ---
+    const isProd = process.env.NODE_ENV === "production";
     res.cookie("accessToken", newAccessToken, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "lax",
+      secure: isProd,
+      sameSite: isProd ? "strict" : "lax",
       maxAge: 4 * 60 * 60 * 1000,
     });
 
     res.cookie("refreshToken", newRawRefreshToken, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "lax",
+      secure: isProd,
+      sameSite: isProd ? "strict" : "lax",
       maxAge: 30 * 24 * 60 * 60 * 1000,
     });
 

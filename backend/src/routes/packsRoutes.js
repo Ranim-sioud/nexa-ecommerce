@@ -1,6 +1,6 @@
 import express from 'express';
 import { deletePack, listPacks, updatePack } from '../controllers/packController.js';
-import { requireAuth } from "../middlewares/authMiddleware.js";
+import { requireAuth, requireAdmin } from "../middlewares/authMiddleware.js";
 
 const router = express.Router();
 
@@ -71,7 +71,7 @@ router.get('/', listPacks);
  *           application/json:
  *             schema: { $ref: '#/components/schemas/Error' }
  */
-router.put('/:id', requireAuth, updatePack);
-router.delete('/:id', requireAuth, deletePack);
+router.put('/:id', requireAuth, requireAdmin, updatePack);
+router.delete('/:id', requireAuth, requireAdmin, deletePack);
 
 export default router;

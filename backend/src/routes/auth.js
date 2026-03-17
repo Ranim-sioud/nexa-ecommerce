@@ -1,5 +1,6 @@
 import express from 'express';
 import { registerVendeur, registerFournisseur, login, activateUser, refresh, logout, forgotPassword, verifyResetToken, resetPassword } from '../controllers/authController.js';
+import { requireAuth } from '../middlewares/authMiddleware.js';
 const router = express.Router();
 
 /**
@@ -186,7 +187,7 @@ router.post('/refresh', refresh);
  *       200:
  *         description: Logged out successfully
  */
-router.post('/logout', logout);
+router.post('/logout', requireAuth, logout);
 
 /**
  * @openapi
