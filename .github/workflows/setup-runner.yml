@@ -1,18 +1,27 @@
 name: Setup Self-Hosted Runner
 
 # ─────────────────────────────────────────────────────────────────────────────
-# One-time bootstrap: generates a runner registration token (using GITHUB_TOKEN
-# inside the workflow), SSHes into the VPS, downloads the runner binary,
-# configures it, and installs it as a persistent systemd service.
+# One-time bootstrap: installs the GitHub Actions runner on the VPS as a
+# persistent systemd service.
 #
-# Run this ONCE. After it completes the runner is online and all future deploys
-# run directly on the VPS — no SSH round-trip needed.
+# STEP 1 — Get your registration token (valid 1 hour):
+#   GitHub → repo → Settings → Actions → Runners → New self-hosted runner
+#   Copy the token from the "./config.sh ... --token XXXXXX" command shown.
+#
+# STEP 2 — Trigger this workflow:
+#   GitHub → Actions → Setup Self-Hosted Runner → Run workflow
+#   Paste the token in the input field → Run.
+#
+# After it completes the runner is online. All future deploys run directly
+# on the VPS — no SSH secrets needed.
 # ─────────────────────────────────────────────────────────────────────────────
 on:
   workflow_dispatch:
-
-permissions:
-  actions: write   # allows generating runner registration tokens
+    inputs:
+      runner_token:
+        description: "Runner registration token (from Settings → Actions → Runners → New runner)"
+        required: true
+        type: string
 
 jobs:
   setup:
@@ -21,23 +30,10 @@ jobs:
     timeout-minutes: 15
 
     steps:
-      # ── 1. Generate registration token ────────────────────────────────────
-      - name: Generate runner registration token
-        id: reg_token
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          TOKEN=$(gh api --method POST \
-            repos/Ranim-sioud/nexa-ecommerce/actions/runners/registration-token \
-            --jq '.token')
-          echo "token=$TOKEN" >> $GITHUB_OUTPUT
-          echo "Registration token generated."
-
-      # ── 2. SSH into VPS — install runner + systemd service ────────────────
       - name: Install and start runner on VPS
         uses: appleboy/ssh-action@v1.2.0
         env:
-          REG_TOKEN: ${{ steps.reg_token.outputs.token }}
+          REG_TOKEN: ${{ inputs.runner_token }}
         with:
           host:     ${{ secrets.VPS_HOST }}
           username: ${{ secrets.VPS_USER }}
@@ -55,13 +51,13 @@ jobs:
               EXISTING=$(sudo systemctl list-units --type=service --all --no-legend 2>/dev/null \
                 | grep 'actions\.runner\.' | awk '{print $1}' | head -1)
               if [ -n "$EXISTING" ]; then
-                echo "Service found: $EXISTING — enabling and restarting..."
+                echo "Service: $EXISTING — enabling and restarting..."
                 sudo systemctl enable  "$EXISTING"
                 sudo systemctl restart "$EXISTING"
                 sleep 3
                 sudo systemctl status  "$EXISTING" --no-pager
               else
-                echo "Service not registered yet — installing..."
+                echo "Service not registered yet — installing now..."
                 sudo ./svc.sh install
                 sudo ./svc.sh start
                 sleep 3
@@ -81,13 +77,13 @@ jobs:
               | grep '"tag_name"' | head -1 | sed 's/.*"v\([^"]*\)".*/\1/')
             echo "    Version: $RUNNER_VERSION"
 
+            echo "==> Downloading runner..."
             TARBALL="actions-runner-linux-x64-${RUNNER_VERSION}.tar.gz"
-            echo "==> Downloading $TARBALL..."
             curl -fsSL -O "https://github.com/actions/runner/releases/download/v${RUNNER_VERSION}/${TARBALL}"
             tar xzf "$TARBALL"
-            rm  -f  "$TARBALL"
+            rm -f   "$TARBALL"
 
-            echo "==> Installing runner OS dependencies..."
+            echo "==> Installing OS dependencies..."
             sudo ./bin/installdependencies.sh
 
             echo "==> Configuring runner (unattended)..."
