@@ -1,15 +1,20 @@
 'use strict';
 
 /**
- * SQUASHED MIGRATION — Full schema v1
+ * SQUASHED MIGRATION v2 — Full schema derived from production SQL dump
  *
- * Replaces all previous migrations. Every statement uses IF NOT EXISTS / DO $$
- * so it is safe to run on an empty DB or one that was partially migrated.
+ * Column types mirror the actual production DB (backup_Nexa.sql):
+ *  - users.role, vendeurs.statut_demande_pack, demandes_de_retrait.statut,
+ *    medias.type → use real PostgreSQL ENUM types (as in production)
+ *  - All other "enum-like" columns → VARCHAR + CHECK constraint (as in production)
+ *
+ * Every statement uses IF NOT EXISTS / DO $$ so it is safe to run on an
+ * empty DB or one that was partially migrated by old individual migrations.
  *
  * Table creation order respects FK dependencies.
  */
 module.exports = {
-  async up(queryInterface, Sequelize) {
+  async up(queryInterface) {
     const q = queryInterface.sequelize;
 
     // ─── Helper: run raw SQL, swallow "already exists" errors ───────────────
@@ -18,6 +23,31 @@ module.exports = {
         if (!e.message.includes('already exists')) throw e;
       }
     }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // ENUM types actually used as column types in production
+    // ═══════════════════════════════════════════════════════════════════════
+    await safe(`
+      DO $$ BEGIN
+        CREATE TYPE enum_users_role AS ENUM ('vendeur','fournisseur','admin','specialiste');
+      EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+    `);
+    await safe(`
+      DO $$ BEGIN
+        CREATE TYPE enum_vendeurs_statut_demande_pack
+          AS ENUM ('aucune','en_attente','approuvee','refusee');
+      EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+    `);
+    await safe(`
+      DO $$ BEGIN
+        CREATE TYPE enum_demandes_de_retrait_statut AS ENUM ('en_attente','approuve','refuse');
+      EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+    `);
+    await safe(`
+      DO $$ BEGIN
+        CREATE TYPE enum_medias_type AS ENUM ('image','video');
+      EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+    `);
 
     // ═══════════════════════════════════════════════════════════════════════
     // 1. packs  (no FK deps)
@@ -44,13 +74,8 @@ module.exports = {
     `);
 
     // ═══════════════════════════════════════════════════════════════════════
-    // 3. users  (no FK deps)
+    // 3. users  (no FK deps) — role uses ENUM (matches production)
     // ═══════════════════════════════════════════════════════════════════════
-    await safe(`
-      DO $$ BEGIN
-        CREATE TYPE enum_users_role AS ENUM ('vendeur','fournisseur','admin','specialiste');
-      EXCEPTION WHEN duplicate_object THEN NULL; END $$;
-    `);
     await q.query(`
       CREATE TABLE IF NOT EXISTS "users" (
         "id"                     SERIAL PRIMARY KEY,
@@ -71,14 +96,14 @@ module.exports = {
         "refresh_token"          VARCHAR(255),
         "reset_password_token"   VARCHAR(255),
         "reset_password_expires" TIMESTAMP WITH TIME ZONE,
-        "cree_le"                TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-        "modifie_le"             TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+        "cree_le"                TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+        "modifie_le"             TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
       );
     `);
     await safe(`CREATE INDEX IF NOT EXISTS users_reset_token_idx ON "users"("reset_password_token");`);
 
     // ═══════════════════════════════════════════════════════════════════════
-    // 4. fournisseurs  (id_user → users)
+    // 4. fournisseurs  (id_user → users; id is SERIAL PK)
     // ═══════════════════════════════════════════════════════════════════════
     await q.query(`
       CREATE TABLE IF NOT EXISTS "fournisseurs" (
@@ -91,13 +116,8 @@ module.exports = {
 
     // ═══════════════════════════════════════════════════════════════════════
     // 5. vendeurs  (id_user PK → users, pack_cle → packs)
+    //    statut_demande_pack uses ENUM (matches production)
     // ═══════════════════════════════════════════════════════════════════════
-    await safe(`
-      DO $$ BEGIN
-        CREATE TYPE enum_vendeurs_statut_demande_pack
-          AS ENUM ('aucune','en_attente','approuvee','refusee');
-      EXCEPTION WHEN duplicate_object THEN NULL; END $$;
-    `);
     await q.query(`
       CREATE TABLE IF NOT EXISTS "vendeurs" (
         "id_user"              INTEGER PRIMARY KEY REFERENCES "users"("id") ON DELETE CASCADE,
@@ -108,8 +128,8 @@ module.exports = {
         "pack_demande"         VARCHAR(50),
         "statut_demande_pack"  enum_vendeurs_statut_demande_pack DEFAULT 'aucune',
         "nom_boutique"         VARCHAR(255),
-        "cree_le"              TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-        "modifie_le"           TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+        "cree_le"              TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+        "modifie_le"           TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
       );
     `);
     await safe(`CREATE INDEX IF NOT EXISTS vendeurs_parraine_par_idx ON "vendeurs"("parraine_par");`);
@@ -122,14 +142,14 @@ module.exports = {
         "id"          SERIAL PRIMARY KEY,
         "prenom"      VARCHAR(255) NOT NULL,
         "nom"         VARCHAR(255) NOT NULL,
-        "telephone"   VARCHAR(255) NOT NULL,
+        "telephone"   VARCHAR(50)  NOT NULL,
         "email"       VARCHAR(255),
         "adresse"     TEXT NOT NULL,
-        "gouvernorat" VARCHAR(255) NOT NULL,
-        "ville"       VARCHAR(255) NOT NULL,
+        "gouvernorat" VARCHAR(100) NOT NULL,
+        "ville"       VARCHAR(100) NOT NULL,
         "id_vendeur"  INTEGER NOT NULL REFERENCES "users"("id") ON DELETE CASCADE,
-        "cree_le"     TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-        "modifie_le"  TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+        "cree_le"     TIMESTAMP WITHOUT TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+        "modifie_le"  TIMESTAMP WITHOUT TIME ZONE DEFAULT CURRENT_TIMESTAMP
       );
     `);
 
@@ -142,54 +162,36 @@ module.exports = {
         "name"                VARCHAR(255) NOT NULL,
         "description"         TEXT,
         "specialist_user_id"  INTEGER REFERENCES "users"("id") ON DELETE SET NULL,
-        "created_at"          TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-        "updated_at"          TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+        "created_at"          TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+        "updated_at"          TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
       );
     `);
 
     // ═══════════════════════════════════════════════════════════════════════
     // 8. permissions  (specialist_id, assigned_by → users)
+    //    module uses VARCHAR + CHECK (matches production)
     // ═══════════════════════════════════════════════════════════════════════
-    await safe(`
-      DO $$ BEGIN
-        CREATE TYPE enum_permissions_module
-          AS ENUM ('users','products','tickets','finance','logistics','training','features','stock');
-      EXCEPTION WHEN duplicate_object THEN NULL; END $$;
-    `);
     await q.query(`
       CREATE TABLE IF NOT EXISTS "permissions" (
         "id"            SERIAL PRIMARY KEY,
         "specialist_id" INTEGER NOT NULL REFERENCES "users"("id") ON DELETE CASCADE,
-        "module"        enum_permissions_module NOT NULL,
+        "module"        VARCHAR(50) NOT NULL
+                          CHECK (module IN ('users','products','tickets','finance',
+                                            'logistics','training','features','stock')),
         "can_view"      BOOLEAN DEFAULT FALSE,
         "can_edit"      BOOLEAN DEFAULT FALSE,
         "can_delete"    BOOLEAN DEFAULT FALSE,
         "can_manage"    BOOLEAN DEFAULT FALSE,
         "assigned_by"   INTEGER NOT NULL REFERENCES "users"("id"),
-        "assigned_at"   TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-        "updated_at"    TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+        "assigned_at"   TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+        "updated_at"    TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
       );
     `);
 
     // ═══════════════════════════════════════════════════════════════════════
     // 9. tasks  (assigned_to, assigned_by → users)
+    //    module/status/priority use VARCHAR + CHECK (matches production)
     // ═══════════════════════════════════════════════════════════════════════
-    await safe(`
-      DO $$ BEGIN
-        CREATE TYPE enum_tasks_module
-          AS ENUM ('users','products','tickets','finance','logistics','training','features','stock');
-      EXCEPTION WHEN duplicate_object THEN NULL; END $$;
-    `);
-    await safe(`
-      DO $$ BEGIN
-        CREATE TYPE enum_tasks_status AS ENUM ('pending','in_progress','completed','cancelled');
-      EXCEPTION WHEN duplicate_object THEN NULL; END $$;
-    `);
-    await safe(`
-      DO $$ BEGIN
-        CREATE TYPE enum_tasks_priority AS ENUM ('low','medium','high','urgent');
-      EXCEPTION WHEN duplicate_object THEN NULL; END $$;
-    `);
     await q.query(`
       CREATE TABLE IF NOT EXISTS "tasks" (
         "id"              SERIAL PRIMARY KEY,
@@ -197,36 +199,40 @@ module.exports = {
         "description"     TEXT,
         "assigned_to"     INTEGER NOT NULL REFERENCES "users"("id") ON DELETE CASCADE,
         "assigned_by"     INTEGER NOT NULL REFERENCES "users"("id"),
-        "module"          enum_tasks_module NOT NULL,
+        "module"          VARCHAR(50) NOT NULL
+                            CHECK (module IN ('users','products','tickets','finance',
+                                              'logistics','training','features','stock')),
         "action_required" VARCHAR(255) NOT NULL,
-        "status"          enum_tasks_status DEFAULT 'pending',
+        "status"          VARCHAR(20) DEFAULT 'pending'
+                            CHECK (status IN ('pending','in_progress','completed','cancelled')),
         "due_date"        TIMESTAMP WITH TIME ZONE,
-        "priority"        enum_tasks_priority DEFAULT 'medium',
-        "created_at"      TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-        "updated_at"      TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+        "priority"        VARCHAR(20) DEFAULT 'medium'
+                            CHECK (priority IN ('low','medium','high','urgent')),
+        "created_at"      TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+        "updated_at"      TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
       );
     `);
 
     // ═══════════════════════════════════════════════════════════════════════
-    // 10. produits  (id_fournisseur → users, id_categorie → categories)
+    // 10. produits  (id_fournisseur, id_user → users, id_categorie → categories)
     // ═══════════════════════════════════════════════════════════════════════
     await q.query(`
       CREATE TABLE IF NOT EXISTS "produits" (
-        "id"               SERIAL PRIMARY KEY,
-        "code"             VARCHAR(255) UNIQUE,
-        "nom"              VARCHAR(255) NOT NULL,
-        "description"      TEXT,
-        "livraison"        TEXT,
-        "prix_gros"        DECIMAL(12,2),
-        "stock"            INTEGER DEFAULT 0,
-        "id_externe"       VARCHAR(255) UNIQUE,
+        "id"                SERIAL PRIMARY KEY,
+        "code"              VARCHAR(255) UNIQUE,
+        "nom"               VARCHAR(255) NOT NULL,
+        "description"       TEXT,
+        "livraison"         TEXT,
+        "prix_gros"         DECIMAL(12,2),
+        "stock"             INTEGER DEFAULT 0,
+        "id_externe"        VARCHAR(255) UNIQUE,
         "variantes_actives" BOOLEAN DEFAULT FALSE,
-        "id_fournisseur"   INTEGER NOT NULL REFERENCES "users"("id"),
-        "id_categorie"     INTEGER REFERENCES "categories"("id") ON DELETE SET NULL,
-        "rupture_stock"    BOOLEAN DEFAULT FALSE,
-        "id_user"          INTEGER REFERENCES "users"("id"),
-        "createdAt"        TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-        "updatedAt"        TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+        "id_fournisseur"    INTEGER NOT NULL REFERENCES "users"("id"),
+        "id_categorie"      INTEGER NOT NULL REFERENCES "categories"("id") ON DELETE RESTRICT,
+        "rupture_stock"     BOOLEAN DEFAULT FALSE,
+        "id_user"           INTEGER REFERENCES "users"("id"),
+        "createdAt"         TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+        "updatedAt"         TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
       );
     `);
 
@@ -242,19 +248,15 @@ module.exports = {
         "prix_gros"  DECIMAL(12,2),
         "stock"      INTEGER DEFAULT 0,
         "id_externe" VARCHAR(255) UNIQUE,
-        "createdAt"  TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-        "updatedAt"  TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+        "createdAt"  TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+        "updatedAt"  TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
       );
     `);
 
     // ═══════════════════════════════════════════════════════════════════════
     // 12. medias  (id_produit → produits)
+    //    type uses ENUM (matches production)
     // ═══════════════════════════════════════════════════════════════════════
-    await safe(`
-      DO $$ BEGIN
-        CREATE TYPE enum_medias_type AS ENUM ('image','video');
-      EXCEPTION WHEN duplicate_object THEN NULL; END $$;
-    `);
     await q.query(`
       CREATE TABLE IF NOT EXISTS "medias" (
         "id"          SERIAL PRIMARY KEY,
@@ -262,8 +264,8 @@ module.exports = {
         "type"        enum_medias_type NOT NULL,
         "url"         VARCHAR(255) NOT NULL,
         "principale"  BOOLEAN DEFAULT FALSE,
-        "createdAt"   TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-        "updatedAt"   TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+        "createdAt"   TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+        "updatedAt"   TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
       );
     `);
 
@@ -275,8 +277,8 @@ module.exports = {
         "id"          SERIAL PRIMARY KEY,
         "id_vendeur"  INTEGER NOT NULL REFERENCES "users"("id") ON DELETE CASCADE,
         "id_produit"  INTEGER NOT NULL REFERENCES "produits"("id") ON DELETE CASCADE,
-        "cree_le"     TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-        "modifie_le"  TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+        "cree_le"     TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+        "modifie_le"  TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
         UNIQUE("id_vendeur", "id_produit")
       );
     `);
@@ -291,7 +293,7 @@ module.exports = {
         "id_produit"  INTEGER NOT NULL REFERENCES "produits"("id") ON DELETE CASCADE,
         "message"     VARCHAR(255) NOT NULL,
         "vu"          BOOLEAN DEFAULT FALSE,
-        "cree_le"     TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+        "cree_le"     TIMESTAMP WITHOUT TIME ZONE DEFAULT CURRENT_TIMESTAMP
       );
     `);
 
@@ -304,7 +306,7 @@ module.exports = {
         "id_parrain"   INTEGER REFERENCES "users"("id") ON DELETE SET NULL,
         "id_parrained" INTEGER REFERENCES "users"("id") ON DELETE SET NULL,
         "niveau"       INTEGER DEFAULT 1,
-        "cree_le"      TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+        "cree_le"      TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
         UNIQUE("id_parrain", "id_parrained", "niveau")
       );
     `);
@@ -322,94 +324,79 @@ module.exports = {
         "type"             VARCHAR(50),
         "montant"          DECIMAL(12,2),
         "meta"             JSONB,
-        "cree_le"          TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+        "cree_le"          TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
       );
     `);
 
     // ═══════════════════════════════════════════════════════════════════════
     // 17. demandes_de_retrait  (id_user → users)
+    //    statut uses ENUM (matches production)
     // ═══════════════════════════════════════════════════════════════════════
-    await safe(`
-      DO $$ BEGIN
-        CREATE TYPE enum_demandes_de_retrait_statut AS ENUM ('en_attente','approuve','refuse');
-      EXCEPTION WHEN duplicate_object THEN NULL; END $$;
-    `);
     await q.query(`
       CREATE TABLE IF NOT EXISTS "demandes_de_retrait" (
-        "id"           SERIAL PRIMARY KEY,
-        "id_user"      INTEGER NOT NULL REFERENCES "users"("id") ON DELETE CASCADE,
-        "code_retrait" VARCHAR(50) UNIQUE NOT NULL,
-        "montant"      DECIMAL(12,2) NOT NULL,
-        "statut"       enum_demandes_de_retrait_statut DEFAULT 'en_attente',
+        "id"            SERIAL PRIMARY KEY,
+        "id_user"       INTEGER NOT NULL REFERENCES "users"("id") ON DELETE CASCADE,
+        "montant"       DECIMAL(12,2) NOT NULL,
+        "statut"        enum_demandes_de_retrait_statut DEFAULT 'en_attente',
+        "cree_le"       TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
         "date_paiement" TIMESTAMP WITH TIME ZONE,
-        "cree_le"      TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+        "code_retrait"  VARCHAR(50) UNIQUE NOT NULL
       );
     `);
 
     // ═══════════════════════════════════════════════════════════════════════
     // 18. commandes  (id_client → clients, id_vendeur → users)
+    //    etat_confirmation + etat_commande use VARCHAR + CHECK (matches production)
     // ═══════════════════════════════════════════════════════════════════════
-    await safe(`
-      DO $$ BEGIN
-        CREATE TYPE enum_commandes_etat_confirmation AS ENUM ('en_attente','confirmee','annulee');
-      EXCEPTION WHEN duplicate_object THEN NULL; END $$;
-    `);
-    await safe(`
-      DO $$ BEGIN
-        CREATE TYPE enum_commandes_etat_commande AS ENUM (
-          'en_attente','en_cours','livree','annulee',
-          'partiellement_livree','partiellement_annulee'
-        );
-      EXCEPTION WHEN duplicate_object THEN NULL; END $$;
-    `);
     await q.query(`
       CREATE TABLE IF NOT EXISTS "commandes" (
         "id"                    SERIAL PRIMARY KEY,
-        "code"                  VARCHAR(255) UNIQUE NOT NULL,
+        "code"                  VARCHAR(50) UNIQUE NOT NULL,
         "id_client"             INTEGER NOT NULL REFERENCES "clients"("id"),
         "id_vendeur"            INTEGER NOT NULL REFERENCES "users"("id"),
         "commentaire"           TEXT,
-        "source"                VARCHAR(255),
-        "colis_ouvrable"        BOOLEAN DEFAULT FALSE,
-        "colis_fragile"         BOOLEAN DEFAULT FALSE,
-        "demande_confirmation"  BOOLEAN DEFAULT FALSE,
-        "etat_confirmation"     enum_commandes_etat_confirmation DEFAULT 'en_attente',
-        "collis_date"           TIMESTAMP WITH TIME ZONE,
+        "source"                VARCHAR(100),
+        "etat_confirmation"     VARCHAR(20) DEFAULT 'en_attente'
+                                  CHECK (etat_confirmation IN ('en_attente','confirmee','annulee')),
+        "collis_date"           TIMESTAMP WITHOUT TIME ZONE,
         "frais_livraison"       DECIMAL(10,2) DEFAULT 0,
         "frais_plateforme"      DECIMAL(10,2) DEFAULT 0,
         "total"                 DECIMAL(10,2) DEFAULT 0,
-        "etat_commande"         enum_commandes_etat_commande DEFAULT 'en_attente',
-        "cree_le"               TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-        "modifie_le"            TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+        "cree_le"               TIMESTAMP WITHOUT TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+        "modifie_le"            TIMESTAMP WITHOUT TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+        "colis_ouvrable"        BOOLEAN DEFAULT FALSE,
+        "colis_fragile"         BOOLEAN DEFAULT FALSE,
+        "demande_confirmation"  BOOLEAN DEFAULT FALSE,
+        "etat_commande"         VARCHAR(30) DEFAULT 'en_attente'
+                                  CHECK (etat_commande IN ('en_attente','en_cours','livree','annulee',
+                                                           'partiellement_livree','partiellement_annulee'))
       );
     `);
 
     // ═══════════════════════════════════════════════════════════════════════
     // 19. sous_commandes  (id_commande → commandes, id_fournisseur → users)
+    //    statut uses VARCHAR + CHECK (matches production)
     // ═══════════════════════════════════════════════════════════════════════
-    await safe(`
-      DO $$ BEGIN
-        CREATE TYPE enum_sous_commandes_statut AS ENUM (
-          'en_attente','emballage_en_cours','annulee',
-          'Tentative de confirmation 1','Tentative de confirmation 2',
-          'Tentative de confirmation 3','Tentative de confirmation 4',
-          'Tentative de confirmation 5','en_attente_enlevement','Colis enlevé',
-          'Problème d''enlèvement','Réception_dépôt','en_cours_livraison',
-          'Problème de livraison','livree','Livrée payée','À retourner',
-          'Colis retourné','Retournée payée','Non disponible'
-        );
-      EXCEPTION WHEN duplicate_object THEN NULL; END $$;
-    `);
     await q.query(`
       CREATE TABLE IF NOT EXISTS "sous_commandes" (
-        "id"            SERIAL PRIMARY KEY,
-        "code"          VARCHAR(255) UNIQUE NOT NULL,
-        "id_commande"   INTEGER NOT NULL REFERENCES "commandes"("id") ON DELETE CASCADE,
+        "id"             SERIAL PRIMARY KEY,
+        "code"           VARCHAR(50) UNIQUE NOT NULL,
+        "id_commande"    INTEGER NOT NULL REFERENCES "commandes"("id") ON DELETE CASCADE,
         "id_fournisseur" INTEGER NOT NULL REFERENCES "users"("id"),
-        "statut"        enum_sous_commandes_statut DEFAULT 'en_attente',
-        "total"         DECIMAL(10,2) DEFAULT 0,
-        "cree_le"       TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-        "modifie_le"    TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+        "statut"         VARCHAR(30) DEFAULT 'en_attente'
+                           CHECK (statut IN (
+                             'en_attente','emballage_en_cours','annulee',
+                             'Tentative de confirmation 1','Tentative de confirmation 2',
+                             'Tentative de confirmation 3','Tentative de confirmation 4',
+                             'Tentative de confirmation 5','en_attente_enlevement',
+                             'Colis enlevé','Problème d''enlèvement','Réception_dépôt',
+                             'en_cours_livraison','Problème de livraison','livree',
+                             'Livrée payée','À retourner','Colis retourné',
+                             'Retournée payée','Non disponible'
+                           )),
+        "total"          DECIMAL(10,2) DEFAULT 0,
+        "cree_le"        TIMESTAMP WITHOUT TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+        "modifie_le"     TIMESTAMP WITHOUT TIME ZONE DEFAULT CURRENT_TIMESTAMP
       );
     `);
 
@@ -418,27 +405,23 @@ module.exports = {
     // ═══════════════════════════════════════════════════════════════════════
     await q.query(`
       CREATE TABLE IF NOT EXISTS "lignes_commande" (
-        "id"              SERIAL PRIMARY KEY,
+        "id"               SERIAL PRIMARY KEY,
         "id_sous_commande" INTEGER NOT NULL REFERENCES "sous_commandes"("id") ON DELETE CASCADE,
-        "id_produit"      INTEGER NOT NULL REFERENCES "produits"("id"),
-        "id_variation"    INTEGER REFERENCES "variations"("id") ON DELETE SET NULL,
-        "quantite"        INTEGER NOT NULL,
-        "prix_vente"      DECIMAL(10,2) NOT NULL,
-        "prix_gros"       DECIMAL(10,2) NOT NULL,
-        "profit_unitaire" DECIMAL(10,2) NOT NULL,
-        "cree_le"         TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-        "modifie_le"      TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+        "id_produit"       INTEGER NOT NULL REFERENCES "produits"("id"),
+        "id_variation"     INTEGER REFERENCES "variations"("id") ON DELETE SET NULL,
+        "quantite"         INTEGER NOT NULL CHECK (quantite > 0),
+        "prix_vente"       DECIMAL(10,2) NOT NULL,
+        "prix_gros"        DECIMAL(10,2) NOT NULL,
+        "profit_unitaire"  DECIMAL(10,2) NOT NULL,
+        "cree_le"          TIMESTAMP WITHOUT TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+        "modifie_le"       TIMESTAMP WITHOUT TIME ZONE DEFAULT CURRENT_TIMESTAMP
       );
     `);
 
     // ═══════════════════════════════════════════════════════════════════════
     // 21. tickets  (creator_id, assigned_to → users; type_id → tickets_types)
+    //    status uses VARCHAR (matches production — no CHECK in dump)
     // ═══════════════════════════════════════════════════════════════════════
-    await safe(`
-      DO $$ BEGIN
-        CREATE TYPE enum_tickets_status AS ENUM ('ouvert','en_attente','ferme');
-      EXCEPTION WHEN duplicate_object THEN NULL; END $$;
-    `);
     await q.query(`
       CREATE TABLE IF NOT EXISTS "tickets" (
         "id"           SERIAL PRIMARY KEY,
@@ -447,7 +430,7 @@ module.exports = {
         "product_code" VARCHAR(100),
         "creator_id"   INTEGER NOT NULL REFERENCES "users"("id"),
         "type_id"      INTEGER NOT NULL REFERENCES "tickets_types"("id"),
-        "status"       enum_tickets_status DEFAULT 'ouvert',
+        "status"       VARCHAR(30) DEFAULT 'ouvert',
         "assigned_to"  INTEGER REFERENCES "users"("id") ON DELETE SET NULL,
         "created_at"   TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
         "updated_at"   TIMESTAMP WITH TIME ZONE DEFAULT NOW()
@@ -456,19 +439,15 @@ module.exports = {
 
     // ═══════════════════════════════════════════════════════════════════════
     // 22. tickets_messages  (tickets_id → tickets, sender_id → users)
+    //    channel uses VARCHAR (matches production)
     // ═══════════════════════════════════════════════════════════════════════
-    await safe(`
-      DO $$ BEGIN
-        CREATE TYPE enum_tickets_messages_channel AS ENUM ('portal','phone','whatsapp','email');
-      EXCEPTION WHEN duplicate_object THEN NULL; END $$;
-    `);
     await q.query(`
       CREATE TABLE IF NOT EXISTS "tickets_messages" (
         "id"         SERIAL PRIMARY KEY,
         "tickets_id" INTEGER NOT NULL REFERENCES "tickets"("id") ON DELETE CASCADE,
         "sender_id"  INTEGER NOT NULL REFERENCES "users"("id"),
         "body"       TEXT NOT NULL,
-        "channel"    enum_tickets_messages_channel DEFAULT 'portal',
+        "channel"    VARCHAR(30) DEFAULT 'portal',
         "created_at" TIMESTAMP WITH TIME ZONE DEFAULT NOW()
       );
     `);
@@ -481,39 +460,36 @@ module.exports = {
         "id"                   SERIAL PRIMARY KEY,
         "id_commande"          INTEGER REFERENCES "commandes"("id") ON DELETE SET NULL,
         "id_sous_commande"     INTEGER REFERENCES "sous_commandes"("id") ON DELETE SET NULL,
-        "statut"               VARCHAR(255) NOT NULL,
+        "statut"               VARCHAR(100) NOT NULL,
         "description"          TEXT,
         "tentatives_livraison" INTEGER DEFAULT 0,
-        "cree_le"              TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-        "modifie_le"           TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+        "cree_le"              TIMESTAMP WITHOUT TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+        "modifie_le"           TIMESTAMP WITHOUT TIME ZONE DEFAULT CURRENT_TIMESTAMP
       );
     `);
 
     // ═══════════════════════════════════════════════════════════════════════
     // 24. pickups  (id_fournisseur → fournisseurs)
+    //    status uses VARCHAR (matches production)
+    //    modifie_le is nullable with no default (matches production)
     // ═══════════════════════════════════════════════════════════════════════
-    await safe(`
-      DO $$ BEGIN
-        CREATE TYPE enum_pickups_status AS ENUM ('demandé','planifié','récupéré');
-      EXCEPTION WHEN duplicate_object THEN NULL; END $$;
-    `);
     await q.query(`
       CREATE TABLE IF NOT EXISTS "pickups" (
-        "id"            SERIAL PRIMARY KEY,
-        "code"          VARCHAR(255) UNIQUE NOT NULL,
+        "id"             SERIAL PRIMARY KEY,
+        "code"           VARCHAR(100) UNIQUE NOT NULL,
         "id_fournisseur" INTEGER NOT NULL REFERENCES "fournisseurs"("id") ON DELETE CASCADE,
-        "id_livreur"    INTEGER REFERENCES "users"("id") ON DELETE SET NULL,
-        "status"        enum_pickups_status DEFAULT 'demandé',
-        "meta"          JSONB,
-        "cree_le"       TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-        "modifie_le"    TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+        "id_livreur"     INTEGER REFERENCES "users"("id") ON DELETE SET NULL,
+        "status"         VARCHAR(50) DEFAULT 'demandé',
+        "meta"           JSONB,
+        "cree_le"        TIMESTAMP WITHOUT TIME ZONE DEFAULT NOW(),
+        "modifie_le"     TIMESTAMP WITHOUT TIME ZONE
       );
     `);
 
-    console.log('✅ Full schema migration complete — all 24 tables created (idempotent).');
+    console.log('✅ Squash migration v2 complete — all 24 tables created (idempotent, matches production schema).');
   },
 
-  async down(queryInterface, Sequelize) {
+  async down(queryInterface) {
     // Drop in reverse dependency order
     const tables = [
       'pickups','trackings','tickets_messages','tickets',
@@ -524,17 +500,14 @@ module.exports = {
       'vendeurs','fournisseurs','users','categories','packs',
     ];
     for (const t of tables) {
-      await queryInterface.sequelize.query(
-        `DROP TABLE IF EXISTS "${t}" CASCADE;`
-      );
+      await queryInterface.sequelize.query(`DROP TABLE IF EXISTS "${t}" CASCADE;`);
     }
+    // Only drop the 4 ENUM types we actually create
     const types = [
-      'enum_users_role','enum_vendeurs_statut_demande_pack',
-      'enum_permissions_module','enum_tasks_module','enum_tasks_status','enum_tasks_priority',
-      'enum_medias_type','enum_demandes_de_retrait_statut',
-      'enum_commandes_etat_confirmation','enum_commandes_etat_commande',
-      'enum_sous_commandes_statut','enum_tickets_status',
-      'enum_tickets_messages_channel','enum_pickups_status',
+      'enum_users_role',
+      'enum_vendeurs_statut_demande_pack',
+      'enum_demandes_de_retrait_statut',
+      'enum_medias_type',
     ];
     for (const t of types) {
       await queryInterface.sequelize.query(`DROP TYPE IF EXISTS "${t}" CASCADE;`);

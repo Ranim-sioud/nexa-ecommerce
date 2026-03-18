@@ -12,6 +12,16 @@ dotenv.config();
 // Each entity is created only if it does not already exist (findOrCreate on email/name).
 async function seed() {
   try {
+    // Fast-path: if admin already exists, all reference data is assumed present.
+    const adminEmail = process.env.ADMIN_EMAIL;
+    if (!adminEmail) throw new Error("ADMIN_EMAIL env var is required for seeding");
+
+    const existingAdmin = await User.findOne({ where: { email: adminEmail } });
+    if (existingAdmin) {
+      console.log("Seed skipped — admin already exists, reference data assumed present.");
+      process.exit(0);
+    }
+
     const passwordHash = await argon2.hash("password123", { type: argon2.argon2id });
     const defaults = { ville: "N/A", gouvernorat: "N/A", adresse: "N/A" };
 
@@ -37,9 +47,7 @@ async function seed() {
 
     const [it, logistique, financier, compte, formation, produit, fonctionnalite, confirmationStock] = createdSpecialists;
 
-    // Admin — created from env vars; skipped if already exists
-    const adminEmail = process.env.ADMIN_EMAIL;
-    if (!adminEmail) throw new Error("ADMIN_EMAIL env var is required for seeding");
+    // Admin — created from env vars (guaranteed non-null: checked above)
 
     const passwordHashAdmin = await argon2.hash(process.env.ADMIN_PASSWORD, { type: argon2.argon2id });
 
@@ -120,7 +128,7 @@ async function seed() {
       });
     }
     
-    console.log("Seed complete — specialists, admin, ticket types, packs, , and categories are present.");
+    console.log("Seed complete — specialists, admin, ticket types, packs, and categories are present.");
     process.exit(0);
   } catch (err) {
     console.error("Seed error:", err);

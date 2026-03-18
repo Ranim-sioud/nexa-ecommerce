@@ -19,5 +19,5 @@ RUN mkdir -p /app/logs && chown -R node:node /app/logs
 # Permissions + sécurité minimale
 USER node
 
-# Lancement migrations + serveur
-CMD ["sh", "-c", "npx sequelize-cli db:migrate --debug && npm start"]
+# Bootstrap: migrations + idempotent seed + start server
+CMD ["sh", "-c", "node scripts/initial_db.js && npm start"]

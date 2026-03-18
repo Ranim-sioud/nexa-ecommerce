@@ -23,7 +23,23 @@
       "Bash(powershell:*)",
       "Bash(docker:*)",
       "Bash(\"/c/Program Files/PostgreSQL/15/bin/pg_restore\":*)",
-      "Bash(git:*)"
+      "Bash(git:*)",
+      "Bash(nvim:*)",
+      "Bash(winget:*)",
+      "Bash(choco upgrade:*)",
+      "Bash(\"/c/Users/Ferid/AppData/Local/Programs/nvim-win64/bin/nvim.exe\" --version 2>&1 | head -3)",
+      "Bash(export:*)",
+      "Bash(NVIM=\"/c/Users/Ferid/AppData/Local/Programs/nvim-win64/bin/nvim.exe\"\n\"$NVIM\" --headless -c \"lua print\\('config loads OK'\\)\" -c \"qa\" 2>&1)",
+      "Bash(NVIM=\"/c/Users/Ferid/AppData/Local/Programs/nvim-win64/bin/nvim.exe\"\n\"$NVIM\" --headless -c \"TSInstall! markdown markdown_inline lua typescript tsx javascript json yaml\" -c \"sleep 30\" -c \"qa\" 2>&1 | tail -10)",
+      "Bash(NVIM=\"/c/Users/Ferid/AppData/Local/Programs/nvim-win64/bin/nvim.exe\"\n\"$NVIM\" --headless +\"TSInstall! typescript tsx javascript markdown markdown_inline lua json yaml html css\" +\"sleep 60\" +qa 2>&1 | tail -15)",
+      "Bash(NVIM=\"/c/Users/Ferid/AppData/Local/Programs/nvim-win64/bin/nvim.exe\"\n\"$NVIM\" --headless +\"TSInstall! markdown markdown_inline\" +\"sleep 45\" +qa 2>&1)",
+      "Bash(/c/mingw64/bin/gcc.exe --version 2>&1 | head -2)",
+      "Bash(NVIM=\"/c/Users/Ferid/AppData/Local/Programs/nvim-win64/bin/nvim.exe\"\n\"$NVIM\" --headless \\\\\n  +\"TSInstall! typescript tsx javascript json yaml html css python bash lua markdown markdown_inline\" \\\\\n  +\"sleep 90\" \\\\\n  +qa 2>&1 | grep -E \"\\(installed|failed|Error\\)\" | head -20)",
+      "Bash(NVIM=\"/c/Users/Ferid/AppData/Local/Programs/nvim-win64/bin/nvim.exe\"\n\"$NVIM\" --headless \\\\\n  +\"TSInstall! typescript tsx javascript json yaml html css python bash lua markdown markdown_inline\" \\\\\n  +\"sleep 90\" \\\\\n  +qa 2>&1 | grep -E \"\\(installed|failed|Error\\)\" | tail -20)",
+      "Bash(NVIM=\"/c/Users/Ferid/AppData/Local/Programs/nvim-win64/bin/nvim.exe\"\necho \"const x: string = 'hello'\" > /tmp/test.ts\n\"$NVIM\" --headless /tmp/test.ts -c \"lua print\\('nvim 0.11 CLEAN'\\)\" -c \"qa\" 2>&1)",
+      "Bash(NVIM=\"/c/Users/Ferid/AppData/Local/Programs/nvim-win64/bin/nvim.exe\"\n\"$NVIM\" --headless +\"TSInstall! markdown markdown_inline\" +\"sleep 45\" +qa 2>&1 | grep -E \"installed|failed\")",
+      "Bash(python:*)",
+      "Bash(gh api:*)"
     ]
   }
 }
