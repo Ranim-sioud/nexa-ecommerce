@@ -1,9 +1,19 @@
 name: Deploy to Contabo VPS
 
+# ─────────────────────────────────────────────────────────────────────────────
+# Runs directly ON the VPS via the self-hosted runner — no SSH needed.
+# Bootstrap the runner first with: Actions → setup-runner (manual trigger).
+#
+# Flow on every push to main:
+#   git fetch --all && reset --hard origin/main
+#   → docker compose build --no-cache
+#   → docker compose up -d
+#   → health check  (Dockerfile CMD already runs migrate + seed + server)
+# ─────────────────────────────────────────────────────────────────────────────
 on:
   push:
     branches: [main]
-  workflow_dispatch:   # allow manual trigger from GitHub UI
+  workflow_dispatch:
 
 concurrency:
   group: deploy-production
@@ -12,53 +22,60 @@ concurrency:
 jobs:
   deploy:
     name: Build & Deploy
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     timeout-minutes: 20
 
+    env:
+      # Matches the APP_DIR secret; falls back to ~/nexa-ecommerce
+      APP_DIR: ${{ secrets.APP_DIR }}
+
     steps:
-      # ── 1. Checkout ──────────────────────────────────────────────────────────
-      - name: Checkout repository
-        uses: actions/checkout@v4
+      # ── 1. Pull latest code ───────────────────────────────────────────────
+      - name: Pull latest code
+        run: |
+          set -e
+          cd "${APP_DIR:-$HOME/nexa-ecommerce}"
 
-      # ── 2. SSH deploy ────────────────────────────────────────────────────────
-      # All heavy work runs ON the VPS so we don't have to push images anywhere.
-      # The VPS pulls the latest code and rebuilds containers in place.
-      - name: Deploy via SSH
-        uses: appleboy/ssh-action@v1.2.0
-        with:
-          host:     ${{ secrets.VPS_HOST }}
-          username: ${{ secrets.VPS_USER }}
-          key:      ${{ secrets.VPS_SSH_KEY }}
-          port:     ${{ secrets.VPS_PORT || 22 }}
-          # Keep each command on one line; the action runs them in sequence.
-          script: |
-            set -e
+          git fetch --all
+          git reset --hard origin/main
+          echo "HEAD is now: $(git log -1 --oneline)"
 
-            cd ${{ secrets.APP_DIR || '~/nexa-ecommerce' }}
+      # ── 2. Verify .env present ────────────────────────────────────────────
+      - name: Verify .env
+        run: |
+          set -e
+          cd "${APP_DIR:-$HOME/nexa-ecommerce}"
+          [ -f .env ] || { echo "ERROR: .env missing — place it in $APP_DIR first"; exit 1; }
+          echo ".env present"
 
-            echo "==> Pulling latest code..."
-            git pull origin main
+      # ── 3. Build & start containers ───────────────────────────────────────
+      # Dockerfile CMD runs: initial_db.js (migrate + idempotent seed) → npm start
+      - name: Build and start containers
+        run: |
+          set -e
+          cd "${APP_DIR:-$HOME/nexa-ecommerce}"
 
-            echo "==> Copying .env if not present..."
-            [ -f .env ] || { echo "ERROR: .env missing on server"; exit 1; }
+          docker compose build --no-cache
+          docker compose up -d --remove-orphans
 
-            echo "==> Building and starting containers..."
-            docker compose build --no-cache
-            docker compose up -d --remove-orphans
+      # ── 4. Health check ───────────────────────────────────────────────────
+      - name: Wait for backend health
+        run: |
+          set -e
+          cd "${APP_DIR:-$HOME/nexa-ecommerce}"
 
-            echo "==> Waiting for backend to be healthy..."
-            sleep 8
-            docker compose exec -T backend node -e "require('http').get('http://localhost:4001/api/health', r => { process.exit(r.statusCode === 200 ? 0 : 1) })" || \
-              (docker compose logs backend --tail 50 && exit 1)
+          echo "Waiting for backend to become healthy..."
+          sleep 10
+          docker compose exec -T backend \
+            node -e "require('http').get('http://localhost:4001/api/health', r => {
+              console.log('Status:', r.statusCode);
+              process.exit(r.statusCode === 200 ? 0 : 1);
+            })" \
+          || { docker compose logs backend --tail 60; exit 1; }
 
-            echo "==> Running database migrations..."
-            docker compose exec -T backend npx sequelize-cli db:migrate --config config/config.cjs
+          echo "Deploy complete!"
 
-            echo "==> Deploy complete!"
-
-      # ── 3. Notify on failure ─────────────────────────────────────────────────
+      # ── 5. Notify on failure ──────────────────────────────────────────────
       - name: Notify failure
         if: failure()
-        run: |
-          echo "Deploy failed. Check the logs above."
-          # Add Slack / email notification here if needed.
+        run: echo "Deploy failed — check the logs above."
