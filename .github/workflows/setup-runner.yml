@@ -1,67 +1,111 @@
 name: Setup Self-Hosted Runner
 
 # ─────────────────────────────────────────────────────────────────────────────
-# One-time bootstrap: SSHes into the VPS (using the existing secrets) and
-# installs the GitHub Actions runner as a persistent systemd service.
+# One-time bootstrap: generates a runner registration token (using GITHUB_TOKEN
+# inside the workflow), SSHes into the VPS, downloads the runner binary,
+# configures it, and installs it as a persistent systemd service.
 #
-# Run this ONCE after the initial runner download/configure on the VPS.
-# After it completes, the runner is online and all future deploys use it.
+# Run this ONCE. After it completes the runner is online and all future deploys
+# run directly on the VPS — no SSH round-trip needed.
 # ─────────────────────────────────────────────────────────────────────────────
 on:
   workflow_dispatch:
+
+permissions:
+  actions: write   # allows generating runner registration tokens
 
 jobs:
   setup:
     name: Install Runner as Systemd Service
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 15
 
     steps:
-      - name: Connect to VPS and enable runner service
+      # ── 1. Generate registration token ────────────────────────────────────
+      - name: Generate runner registration token
+        id: reg_token
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          TOKEN=$(gh api --method POST \
+            repos/Ranim-sioud/nexa-ecommerce/actions/runners/registration-token \
+            --jq '.token')
+          echo "token=$TOKEN" >> $GITHUB_OUTPUT
+          echo "Registration token generated."
+
+      # ── 2. SSH into VPS — install runner + systemd service ────────────────
+      - name: Install and start runner on VPS
         uses: appleboy/ssh-action@v1.2.0
+        env:
+          REG_TOKEN: ${{ steps.reg_token.outputs.token }}
         with:
           host:     ${{ secrets.VPS_HOST }}
           username: ${{ secrets.VPS_USER }}
           key:      ${{ secrets.VPS_SSH_KEY }}
           port:     ${{ secrets.VPS_PORT || 22 }}
+          envs:     REG_TOKEN
           script: |
             set -e
-
             RUNNER_DIR="$HOME/actions-runner"
 
-            # ── Guard: runner must already be downloaded + configured ──────────
-            if [ ! -d "$RUNNER_DIR" ]; then
-              echo "ERROR: $RUNNER_DIR not found."
-              echo "Please follow these steps first:"
-              echo "  1. GitHub repo → Settings → Actions → Runners → New self-hosted runner"
-              echo "  2. Download the runner tarball to ~/actions-runner"
-              echo "  3. Run ./config.sh --url <repo-url> --token <token>"
-              echo "  4. Then re-run this workflow."
-              exit 1
+            # ── If runner already configured, just (re)start service ─────────
+            if [ -f "$RUNNER_DIR/.credentials" ]; then
+              echo "Runner already configured at $RUNNER_DIR"
+              cd "$RUNNER_DIR"
+              EXISTING=$(sudo systemctl list-units --type=service --all --no-legend 2>/dev/null \
+                | grep 'actions\.runner\.' | awk '{print $1}' | head -1)
+              if [ -n "$EXISTING" ]; then
+                echo "Service found: $EXISTING — enabling and restarting..."
+                sudo systemctl enable  "$EXISTING"
+                sudo systemctl restart "$EXISTING"
+                sleep 3
+                sudo systemctl status  "$EXISTING" --no-pager
+              else
+                echo "Service not registered yet — installing..."
+                sudo ./svc.sh install
+                sudo ./svc.sh start
+                sleep 3
+                sudo ./svc.sh status
+              fi
+              echo "Done. Runner is online."
+              exit 0
             fi
 
+            # ── Fresh install ─────────────────────────────────────────────────
+            echo "==> Creating runner directory: $RUNNER_DIR"
+            mkdir -p "$RUNNER_DIR"
             cd "$RUNNER_DIR"
-            echo "Runner directory: $RUNNER_DIR"
 
-            # ── Check if a systemd service is already registered ──────────────
-            EXISTING=$(sudo systemctl list-units --type=service --all --no-legend 2>/dev/null \
-                        | grep 'actions\.runner\.' | awk '{print $1}' | head -1)
+            echo "==> Fetching latest runner version..."
+            RUNNER_VERSION=$(curl -fsSL https://api.github.com/repos/actions/runner/releases/latest \
+              | grep '"tag_name"' | head -1 | sed 's/.*"v\([^"]*\)".*/\1/')
+            echo "    Version: $RUNNER_VERSION"
 
-            if [ -n "$EXISTING" ]; then
-              echo "Service already registered: $EXISTING"
-              echo "Ensuring it is enabled and running..."
-              sudo systemctl enable  "$EXISTING"
-              sudo systemctl restart "$EXISTING"
-              sleep 3
-              sudo systemctl status  "$EXISTING" --no-pager
-            else
-              echo "Installing runner as systemd service..."
-              sudo ./svc.sh install
-              sudo ./svc.sh start
-              sleep 3
-              echo "Service installed and started."
-              sudo ./svc.sh status
-            fi
+            TARBALL="actions-runner-linux-x64-${RUNNER_VERSION}.tar.gz"
+            echo "==> Downloading $TARBALL..."
+            curl -fsSL -O "https://github.com/actions/runner/releases/download/v${RUNNER_VERSION}/${TARBALL}"
+            tar xzf "$TARBALL"
+            rm  -f  "$TARBALL"
+
+            echo "==> Installing runner OS dependencies..."
+            sudo ./bin/installdependencies.sh
+
+            echo "==> Configuring runner (unattended)..."
+            ./config.sh \
+              --url   https://github.com/Ranim-sioud/nexa-ecommerce \
+              --token "$REG_TOKEN" \
+              --name  "nexa-vps" \
+              --labels "self-hosted,linux,x64" \
+              --work  "_work" \
+              --unattended
+
+            echo "==> Installing as systemd service..."
+            sudo ./svc.sh install
+            sudo ./svc.sh start
+            sleep 3
 
             echo ""
-            echo "Runner is online. Future deploys will run directly on this VPS."
+            echo "Runner status:"
+            sudo ./svc.sh status
+            echo ""
+            echo "Runner is online. All future deploys run directly on this VPS."

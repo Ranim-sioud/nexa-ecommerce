@@ -2,13 +2,14 @@ name: Deploy to Contabo VPS
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Runs directly ON the VPS via the self-hosted runner — no SSH needed.
-# Bootstrap the runner first with: Actions → setup-runner (manual trigger).
+# Bootstrap the runner first with: Actions → Setup Self-Hosted Runner (manual).
 #
 # Flow on every push to main:
 #   git fetch --all && reset --hard origin/main
 #   → docker compose build --no-cache
 #   → docker compose up -d
-#   → health check  (Dockerfile CMD already runs migrate + seed + server)
+#   → health-check retry loop (max 90 s)
+#     (Dockerfile CMD already runs initial_db.js → migrate + seed → npm start)
 # ─────────────────────────────────────────────────────────────────────────────
 on:
   push:
@@ -26,7 +27,7 @@ jobs:
     timeout-minutes: 20
 
     env:
-      # Matches the APP_DIR secret; falls back to ~/nexa-ecommerce
+      # Uses APP_DIR secret; falls back to ~/nexa-ecommerce if not set
       APP_DIR: ${{ secrets.APP_DIR }}
 
     steps:
@@ -35,43 +36,52 @@ jobs:
         run: |
           set -e
           cd "${APP_DIR:-$HOME/nexa-ecommerce}"
-
           git fetch --all
           git reset --hard origin/main
-          echo "HEAD is now: $(git log -1 --oneline)"
+          echo "HEAD: $(git log -1 --oneline)"
 
-      # ── 2. Verify .env present ────────────────────────────────────────────
+      # ── 2. Verify .env ────────────────────────────────────────────────────
       - name: Verify .env
         run: |
           set -e
           cd "${APP_DIR:-$HOME/nexa-ecommerce}"
-          [ -f .env ] || { echo "ERROR: .env missing — place it in $APP_DIR first"; exit 1; }
+          [ -f .env ] || { echo "ERROR: .env missing in $APP_DIR"; exit 1; }
           echo ".env present"
 
       # ── 3. Build & start containers ───────────────────────────────────────
-      # Dockerfile CMD runs: initial_db.js (migrate + idempotent seed) → npm start
+      # Dockerfile CMD: initial_db.js (migrate + idempotent seed) → npm start
       - name: Build and start containers
         run: |
           set -e
           cd "${APP_DIR:-$HOME/nexa-ecommerce}"
-
           docker compose build --no-cache
           docker compose up -d --remove-orphans
 
-      # ── 4. Health check ───────────────────────────────────────────────────
+      # ── 4. Health check — retry up to 90 s ───────────────────────────────
+      # initial_db.js runs before npm start, so the container needs a bit more
+      # time than a pure "npm start" image. Retry every 5 s for up to 18 times.
       - name: Wait for backend health
         run: |
           set -e
           cd "${APP_DIR:-$HOME/nexa-ecommerce}"
 
-          echo "Waiting for backend to become healthy..."
-          sleep 10
-          docker compose exec -T backend \
-            node -e "require('http').get('http://localhost:4001/api/health', r => {
-              console.log('Status:', r.statusCode);
-              process.exit(r.statusCode === 200 ? 0 : 1);
-            })" \
-          || { docker compose logs backend --tail 60; exit 1; }
+          echo "Waiting for backend (max 90 s)..."
+          for i in $(seq 1 18); do
+            if docker compose exec -T backend \
+                node -e "require('http').get('http://localhost:4001/api/health', r => {
+                  process.exit(r.statusCode === 200 ? 0 : 1);
+                }).on('error', () => process.exit(1));" 2>/dev/null; then
+              echo "Backend healthy (attempt $i)"
+              break
+            fi
+            echo "Attempt $i/18 — not ready yet, waiting 5 s..."
+            sleep 5
+            if [ "$i" -eq 18 ]; then
+              echo "Backend never became healthy. Logs:"
+              docker compose logs backend --tail 80
+              exit 1
+            fi
+          done
 
           echo "Deploy complete!"
 

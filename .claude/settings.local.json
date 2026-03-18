@@ -39,7 +39,9 @@
       "Bash(NVIM=\"/c/Users/Ferid/AppData/Local/Programs/nvim-win64/bin/nvim.exe\"\necho \"const x: string = 'hello'\" > /tmp/test.ts\n\"$NVIM\" --headless /tmp/test.ts -c \"lua print\\('nvim 0.11 CLEAN'\\)\" -c \"qa\" 2>&1)",
       "Bash(NVIM=\"/c/Users/Ferid/AppData/Local/Programs/nvim-win64/bin/nvim.exe\"\n\"$NVIM\" --headless +\"TSInstall! markdown markdown_inline\" +\"sleep 45\" +qa 2>&1 | grep -E \"installed|failed\")",
       "Bash(python:*)",
-      "Bash(gh api:*)"
+      "Bash(gh api:*)",
+      "Bash(gh workflow:*)",
+      "Bash(gh run:*)"
     ]
   }
 }
