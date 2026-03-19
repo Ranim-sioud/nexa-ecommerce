@@ -41,7 +41,13 @@
       "Bash(python:*)",
       "Bash(gh api:*)",
       "Bash(gh workflow:*)",
-      "Bash(gh run:*)"
+      "Bash(gh run:*)",
+      "Bash(find /c/Users/Ferid -name *.pem -o -name contabo* -o -name vps*)",
+      "Bash(find /c/Users/Ferid/51_Smartec_Deployment_VPS -name *.pem -o -name id_* -o -name *.key)",
+      "Bash(choco install:*)",
+      "Bash(py:*)",
+      "Read(//d/tmp/**)",
+      "Bash(python3 -:*)"
     ]
   }
 }
