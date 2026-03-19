@@ -62,7 +62,9 @@ services:
       context: ./Ecommerce
       dockerfile: Dockerfile
       args:
-        VITE_API_URL: ${VITE_API_URL:-https://nexa-tn.com/api}
+        # Relative path: browser resolves /api against current page origin (http or https).
+        # Override with absolute URL only if the frontend is served from a different domain.
+        VITE_API_URL: ${VITE_API_URL:-/api}
     restart: unless-stopped
     ports:
       - "127.0.0.1:3000:80"   # only reachable from localhost (nginx reverse-proxy)

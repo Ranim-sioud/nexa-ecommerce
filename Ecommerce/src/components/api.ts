@@ -2,6 +2,8 @@ import axios from "axios";
 import queryClient from "../lib/queryClient";
 
 const api = axios.create({
+  // In Docker/production: VITE_API_URL is baked in as "/api" (relative — matches current protocol).
+  // In local dev (no env var): falls back to localhost:4001.
   baseURL: import.meta.env.VITE_API_URL ?? "http://localhost:4001/api",
   withCredentials: true,
   headers: { "Content-Type": "application/json" }
