@@ -145,7 +145,7 @@ export async function uploadProfileImage(req, res) {
       return res.status(400).json({ message: "Aucun fichier envoyé" });
     }
 
-    const baseUrl = process.env.FRONTEND_URL || 'http://localhost:4001';
+    const baseUrl = process.env.BACKEND_URL || `http://localhost:${process.env.PORT || 4001}`;
     user.image_url = `${baseUrl}/uploads/${req.file.filename}`;
     await user.save();
 

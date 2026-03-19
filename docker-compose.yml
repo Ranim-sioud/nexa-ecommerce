@@ -38,6 +38,7 @@ services:
       JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-15m}
       BCRYPT_SALT:    ${BCRYPT_SALT:-12}
       FRONTEND_URL:   ${FRONTEND_URL:-https://nexa-tn.com}
+      BACKEND_URL:    ${BACKEND_URL:-https://nexa-tn.com}
       # Admin seed vars (only needed on first deploy / manual seed run)
       ADMIN_NOM:          ${ADMIN_NOM:-Admin}
       ADMIN_EMAIL:        ${ADMIN_EMAIL:?required}

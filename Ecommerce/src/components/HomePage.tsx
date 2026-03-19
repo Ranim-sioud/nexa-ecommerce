@@ -422,8 +422,8 @@ export function Navbar ({ forceScrolled = false }) {
                         
                         {/* Boutons - visibles à partir de md (768px) */}
                         <div className="hidden md:flex items-center space-x-2 lg:space-x-4 ml-2 lg:ml-8">
-                            <button 
-                                onClick={() => navigate('/login')}
+                            <button
+                                onClick={() => navigate('/auth/login')}
                                 className="text-sm lg:text-sm font-bold text-theme-white hover:text-theme-secondary transition-colors whitespace-nowrap"
                             >
                                 Connexion

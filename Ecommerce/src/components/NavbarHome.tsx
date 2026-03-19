@@ -75,7 +75,7 @@ export function Navbar ({ onNavigate, toggleDarkMode, darkMode }) {
                     <div className="h-6 w-px bg-theme mx-2"></div>
 
                     <button 
-                        onClick={() => navigate('/login')}
+                        onClick={() => navigate('/auth/login')}
                         className="text-sm font-bold text-theme-white hover:text-theme-secondary transition-colors"
                     >
                         Connexion

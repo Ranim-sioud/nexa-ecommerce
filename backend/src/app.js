@@ -52,13 +52,34 @@ app.use(compression());
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
-const allowedOrigins = [
-  process.env.FRONTEND_URL,
-  ...(process.env.NODE_ENV !== 'production' ? ['http://localhost:3000'] : []),
-].filter(Boolean);
+// Build allowed origins: accept both http/https and www/non-www variants of FRONTEND_URL
+const buildAllowedOrigins = () => {
+  const origins = new Set();
+  const url = process.env.FRONTEND_URL;
+  if (url) {
+    origins.add(url);
+    // Also accept http variant (pre-SSL or misconfigured requests)
+    origins.add(url.replace(/^https:\/\//, 'http://'));
+    // Also accept www variant
+    if (!url.includes('://www.')) {
+      origins.add(url.replace('://', '://www.'));
+      origins.add(url.replace(/^https:\/\//, 'http://').replace('://', '://www.'));
+    }
+  }
+  if (process.env.NODE_ENV !== 'production') {
+    origins.add('http://localhost:3000');
+  }
+  return [...origins].filter(Boolean);
+};
+const allowedOrigins = buildAllowedOrigins();
 
 app.use(cors({
-  origin: allowedOrigins,
+  origin: (origin, callback) => {
+    // Allow non-browser requests (curl, mobile apps, server-to-server)
+    if (!origin) return callback(null, true);
+    if (allowedOrigins.includes(origin)) return callback(null, true);
+    callback(new Error(`CORS: origin ${origin} not allowed`));
+  },
   credentials: true
 }));
 

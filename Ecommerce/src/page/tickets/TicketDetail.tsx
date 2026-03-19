@@ -1,7 +1,6 @@
 import { useEffect, useState, useRef } from "react";
 import { PageLoader } from "../../components/ui/Loader";
 import { useParams } from "react-router-dom";
-import { get, post } from "./api"; // Assurez-vous que ce chemin est correct
 import {
     FileText,
     MessageCircle,

@@ -57,7 +57,7 @@ export default function Settings() {
         nom_boutique: res.data.nom_boutique || "",
         profileImage: res.data.image_url || "",
         codeParrainage: res.data.code_parrainage || "",
-        lienParrainage: `http://localhost:3000/auth/signup?code=${res.data.code_parrainage || ""}`,
+        lienParrainage: `${window.location.origin}/auth/signup?code=${res.data.code_parrainage || ""}`,
         pack_cle: res.data.pack_cle || "",
         pack_demande: res.data.pack_demande || "",
         statut_demande_pack: res.data.statut_demande_pack || "aucune",

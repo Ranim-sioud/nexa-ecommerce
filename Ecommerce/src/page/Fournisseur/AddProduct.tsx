@@ -1,5 +1,4 @@
 import { useEffect, useState } from "react";
-import axios from "axios";
 import ReactQuill from "react-quill";
 import "react-quill/dist/quill.snow.css";
 import Select from "react-select";
@@ -326,7 +325,6 @@ export default function AddProduct({ produit, onCancel, onSaved }: AddProductPro
     setIsSubmitting(true);
     try {
       const formData = new FormData();
-      const API_BASE = import.meta.env.VITE_API_URL ?? "http://localhost:4001/api";
 
       // Ajout des champs généraux
       Object.keys(form).forEach((key) => {
@@ -385,15 +383,10 @@ export default function AddProduct({ produit, onCancel, onSaved }: AddProductPro
           formData.append("mediasToDelete", JSON.stringify(mediasToDelete));
         }
       }
-      const url = produit
-        ? `${API_BASE}/produits/${produit.id}`
-        : `${API_BASE}/produits`;
+      const url = produit ? `/produits/${produit.id}` : `/produits`;
       const method = produit ? "put" : "post";
-      await axios[method](url, formData, {
-        headers: {
-          "Content-Type": "multipart/form-data",
-          Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
-        },
+      await api[method](url, formData, {
+        headers: { "Content-Type": "multipart/form-data" },
       });
 
       alert(produit ? "Produit modifié !" : "Produit ajouté !");
