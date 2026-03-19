@@ -47,7 +47,8 @@
       "Bash(choco install:*)",
       "Bash(py:*)",
       "Read(//d/tmp/**)",
-      "Bash(python3 -:*)"
+      "Bash(python3 -:*)",
+      "Bash(xargs grep:*)"
     ]
   }
 }

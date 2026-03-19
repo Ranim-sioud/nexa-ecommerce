@@ -1,0 +1,7 @@
+POST https://nexa-tn.com/api/auth/login
+Content-Type: application/json
+
+{
+    email: "admin@nexa-tn.com", 
+    mot_de_passe: "NexaAdmin2026!"
+}
